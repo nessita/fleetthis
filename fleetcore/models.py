@@ -73,16 +73,6 @@ class Consumption(models.Model):
         ordering = ('period',)
         get_latest_by = 'period'
 
-import logging
-import os.path
-from pdflib.pdf2txt import TextConverter, TextExtractionNotAllowed, PDFResourceManager, \
-                           FigureItem, TextItem, enc, convert
-LOG_DIR = 'logs'
-FIELD_TOKEN = '|'
-PHONE_TOKEN = '-'
-X = 0
-Y = 1
-
 
 class Bill(models.Model):
     invoice = models.FileField(upload_to='invoices')
@@ -90,56 +80,6 @@ class Bill(models.Model):
     def save(self, *args, **kwargs):
         # parse invoice
         fname = self.invoice.path
-        LOG_FILENAME = os.path.join(LOG_DIR, fname + '.log')
-        logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG,)
-        rsrc = PDFResourceManager()
-        device = CellularConverter(rsrc, file(fname + '.csv', 'wb'))
-        convert(rsrc, device, fname)
+        import pdf2cell
+        data = pdf2cell.main(fname)
         super(Bill, self).save(*args, **kwargs)
-
-
-class CellularConverter(TextConverter):
-    """ Cellular Converter. """
-    start_x, start_y = 0, 0 # 222.5, 22.85
-
-    def __init__(self, rsrc, outfp, codec='utf-8'):
-        TextConverter.__init__(self, rsrc, outfp, codec=codec)
-
-    def process_item(self, item):
-        if not isinstance(item, TextItem): return
-        if item.origin[X] < self.start_x: return
-
-        t = enc(item.text, self.codec)
-        if item.origin[X] > self.last_x: # is a new row?
-            self.last_x, self.last_y = item.origin
-
-            row = FIELD_TOKEN.join(map(str.strip, self.last_content))
-            if self.is_table_row:
-                self.outfp.write(row + '\n') # previous content
-            else:
-                logging.debug("not is table row:" + row)
-
-            self.is_table_row = PHONE_TOKEN in t and t.strip().replace(PHONE_TOKEN, '').isdigit()
-            self.last_content = [t] # new content
-        elif item.origin[Y] == self.last_y: # is the same table cell?
-            self.last_content[-1] += t
-        else: # new table cell for current row
-            #assert self.last_x == item.origin[X]
-            self.last_y = item.origin[Y]
-            self.last_content.append(t)
-
-    def end_page(self, page):
-        TextConverter.end_page(self, page)
-
-        self.last_x, self.last_y = self.start_x, self.start_y
-        self.last_content = []
-        self.is_table_row = False
-
-        page = self.cur_item
-        #import pdb; pdb.set_trace()
-        #self.outfp.write('Page %s\n' % page.id)
-        for child in page.objs:
-            try:
-                self.process_item(child)
-            except AttributeError:
-                pass
