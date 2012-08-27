@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 
-from fleetcore.models import Plan, Phone
+from fleetthis.fleetcore.models import Plan, Phone
 
 
 admin.site.register(Plan)

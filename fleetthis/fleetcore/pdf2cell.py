@@ -3,15 +3,21 @@
 import logging
 import sys
 
-from pdfminer.pdf2txt import (
-    convert,
+from pdfminer.converter import (
     enc,
-    FigureItem,
-    PDFResourceManager,
     TextConverter,
-    TextExtractionNotAllowed,
-    TextItem,
+    LTText,
 )
+from pdfminer.pdfinterp import (
+    PDFResourceManager,
+    process_pdf,
+)
+
+(PHONE_NUMBER, USER, PLAN, MONTHLY_PRICE, SERVICES, REFUNDS,
+ INCLUDED_MIN, EXCEEDED_MIN, EXCEEDED_MIN_PRICE,
+ NDL_MIN, NDL_PRICE, IDL_MIN, IDL_PRICE,
+ SMS, SMS_PRICE, EQUIPMENT_PRICE, OTHER_PRICE, TOTAL_PRICE) = range(18)
+
 
 
 FIELD_TOKEN = '|'
@@ -38,7 +44,7 @@ class CellularConverter(TextConverter):
         self._data = []
 
     def process_item(self, item):
-        if not isinstance(item, TextItem):
+        if not isinstance(item, LTText):
             return
 
         origin_x = float(item.origin[X])
@@ -99,16 +105,16 @@ class CellularConverter(TextConverter):
             self.outfp.write(FIELD_TOKEN.join(row) + '\n')
 
 
-def main(fname):
+def parse_file(fname):
     rsrc = PDFResourceManager()
     device = CellularConverter(rsrc, sys.stdout)
-    data = convert(rsrc, device, fname)
+    process_pdf(rsrc, device, fname)
     return device._data
 
 
 if __name__ == '__main__':
     fname = sys.argv[1]  # fail if no filename is given
-    data = main(fname)
+    data = parse_file(fname)
     print '-----------------------------'
     print data
     print '-----------------------------'

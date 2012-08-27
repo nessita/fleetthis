@@ -15,7 +15,7 @@ people = {
     'Douwe': ['douwe.judith@googlemail.com'],
     'Nelson': ['nelson.bordese@gmail.com'],
     'Nati': ['mbordese@gmail.com', 'nataliabidart@gmail.com'],
-    'Kuka': ['karimoroni@gmail.com', 'damian.barsotti@gmail.com'],
+    'Kuka': ['karimoroni@gmail.com'],
     'Waldo': ['walteralini@gmail.com']}
 
 today = datetime.today()
