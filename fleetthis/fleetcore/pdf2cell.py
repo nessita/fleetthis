@@ -18,8 +18,6 @@ from pdfminer.pdfinterp import (
  NDL_MIN, NDL_PRICE, IDL_MIN, IDL_PRICE,
  SMS, SMS_PRICE, EQUIPMENT_PRICE, OTHER_PRICE, TOTAL_PRICE) = range(18)
 
-
-
 FIELD_TOKEN = '|'
 PHONE_TOKEN = '-'
 X = 0
@@ -27,8 +25,8 @@ Y = 1
 
 
 def is_phone_row(row):
-    result = len(row) == 11 and PHONE_TOKEN in row and \
-             row.strip().replace(PHONE_TOKEN, '').isdigit()
+    result = (len(row) == 11 and PHONE_TOKEN in row and
+              row.strip().replace(PHONE_TOKEN, '').isdigit())
     return result
 
 

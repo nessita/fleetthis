@@ -62,7 +62,7 @@ class MinuteField(models.DecimalField):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User)
-    leader = models.ForeignKey(User, related_name='leadered_by')
+    leader = models.ForeignKey(User, related_name='leadered_by', null=True)
 
 
 class Plan(models.Model):
