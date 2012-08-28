@@ -103,7 +103,7 @@ class Bill(models.Model):
     other_tax = TaxField(default=Decimal('0.01'))
 
     created = models.DateField(auto_now_add=True)
-    last_modified =  models.DateField(auto_now=True)
+    last_modified = models.DateField(auto_now=True)
 
     @property
     def taxes(self):
