@@ -1,2 +1,6 @@
 Django==1.4.1
+mock==1.0b1
 pdfminer==20110515
+pep8==1.3.3
+psycopg2ct==2.4.4
+pyflakes==0.5.0

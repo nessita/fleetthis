@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import logging
+import os
 import sys
 
 from pdfminer.converter import (
@@ -86,11 +87,11 @@ class CellularConverter(TextConverter):
         self.is_table_row = False
 
         page = self.cur_item
-        if page.id != self.table_page:
+        if page.pageid != self.table_page:
             # skip all pages that are not the cell phone listing
             return
 
-        for child in page.objs:
+        for child in page._objs:
             try:
                 self.process_item(child)
             except AttributeError:
@@ -103,10 +104,15 @@ class CellularConverter(TextConverter):
             self.outfp.write(FIELD_TOKEN.join(row) + '\n')
 
 
-def parse_file(fname):
+def parse_file(fname, debug=False):
     rsrc = PDFResourceManager()
-    device = CellularConverter(rsrc, sys.stdout)
-    process_pdf(rsrc, device, fname)
+    if debug:
+        fout = sys.stderr
+    else:
+        fout = open(os.devnull, 'w')
+    device = CellularConverter(rsrc, fout)
+    fp = open(fname, 'rb')
+    process_pdf(rsrc, device, fp)
     return device._data
 
 

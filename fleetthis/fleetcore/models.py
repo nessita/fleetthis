@@ -60,18 +60,14 @@ class MinuteField(models.DecimalField):
         super(MinuteField, self).__init__(*args, **default)
 
 
-class UserProfile(models.Model):
-    user = models.OneToOneField(User)
-    leader = models.ForeignKey(User, related_name='leadered_by', null=True)
-
-
 class Plan(models.Model):
     name = models.CharField(max_length=100)
     with_clearing = models.BooleanField()
     price = MoneyField()
     min_price = MoneyField()
     sms_price = MoneyField()
-    minutes = models.PositiveIntegerField()
+    included_minutes = models.PositiveIntegerField()
+    included_sms = models.PositiveIntegerField()
     description = models.TextField(blank=True)
 
     def __unicode__(self):
@@ -88,17 +84,33 @@ class Phone(models.Model):
         return u'%s - %s' % (self.number, self.user)
 
 
+class Fleet(models.Model):
+    owner = models.ForeignKey(User)
+    account_number = models.PositiveIntegerField()
+    email = models.EmailField()
+    provider = models.CharField(max_length=100)
+
+    def __unicode__(self):
+        return u'Fleet %s - %s' % (self.provider, self.account_number)
+
+
 class Bill(models.Model):
+    fleet = models.ForeignKey(Fleet)
     invoice = models.FileField(upload_to='invoices')
-    billing_date = models.DateField(auto_now=True)  # billing date
-    period_date = models.DateField(auto_now_add=True)  # period to pay
+    billing_date = models.DateField()  # billing date
     internal_tax = TaxField(default=Decimal('0.0417'))
     iva_tax = TaxField(default=Decimal('0.27'))
     other_tax = TaxField(default=Decimal('0.01'))
 
+    created = models.DateField(auto_now_add=True)
+    last_modified =  models.DateField(auto_now=True)
+
     @property
     def taxes(self):
         return self.internal_tax + self.iva_tax + self.other_tax
+
+    def __unicode__(self):
+        return u'Bill %s (%s)' % (self.billing_date, self.fleet)
 
 
 class Consumption(models.Model):
@@ -108,11 +120,11 @@ class Consumption(models.Model):
     # every field (literal) from the invoice
     reported_user = models.CharField(max_length=500, blank=True)
     reported_plan = models.CharField(max_length=100, blank=True)
-    monthly_price = MoneyField('Abono')
-    services = MoneyField('Servicios, packs')
-    refunds = MoneyField('Cargos y reintegros')
-    included_min = MinuteField('Aire incluido')
-    exceeded_min = MinuteField('Aire excedente')
+    monthly_price = MoneyField()
+    services = MoneyField()
+    refunds = MoneyField()
+    included_min = MinuteField()
+    exceeded_min = MinuteField()
     exceeded_min_price = MoneyField()
     ndl_min = MinuteField()
     ndl_min_price = MoneyField()
@@ -122,7 +134,7 @@ class Consumption(models.Model):
     sms_price = MoneyField()
     equipment_price = MoneyField()
     other_price = MoneyField()
-    reported_total = MoneyField('Total')
+    reported_total = MoneyField()
 
     # calculated *and* stored in the DB
     total_before_taxes = MoneyField()
@@ -158,10 +170,16 @@ class Consumption(models.Model):
         unique_together = ('phone', 'bill')
 
 
+class UserProfile(models.Model):
+    user = models.OneToOneField(User)
+    leader = models.ForeignKey(User, related_name='leadered_by', null=True)
+    fleet = models.ForeignKey(Fleet, null=True)
+
+
 def parse_invoice(bill):
     # parse invoice
-    fname = instance.invoice.path
-    data = pdf2cell.main(fname)
+    fname = bill.invoice.path
+    data = pdf2cell.parse_file(fname)
     for d in data:
         phone = Phone.objects.get(number=d[PHONE_NUMBER])
         kwargs = dict(

@@ -3,21 +3,41 @@ environ['DJANGO_SETTINGS_MODULE'] = 'fleetthis.settings'
 
 from decimal import Decimal
 
-from django.contrib.auth.models import User
-from fleetthis.fleetcore.models import Plan, Phone
+from django.contrib.auth.models import Group, User
+from fleetthis.fleetcore.models import Fleet, Plan, Phone
 
 
 all_plans = (
     # ('XMD01', 2200, True), ('INTRC', 9507, False),
-    # ('TCL16', 2900, False), ('', 0, False))
-    ('TCL16', Decimal('35.00'), True, 130, Decimal('0.27'), Decimal('0.1'),
+    ('TCM07', Decimal('35.00'), True, 130, Decimal('0.22'), 100, Decimal('0.07'),
+     """DETALLE PLAN DE PRECIO: PLAN TCM07 - Abono: $ 35.00 Pesos
+Libres en el Plan:$ 35.00
+Precios sin imp ni cargo ENARD Ley 26573
+Min. destino a teléfonos fijos: $ 0.22 $ 0.22
+Min. destino a móviles del cliente: $ 0.00 $ 0.00
+Min. destino a móviles: $ 0.22 $ 0.22
+Los SMS hacen clearing con el resto de las líneas en el mismo plan,
+y cada línea aporta 100 SMS a la bolsa. Los SMS dentro de la bolsa de mensajes
+salen $ 0.07, y por afuera cada uno sale $ 0.10.
+"""),
+    ('TSC16', Decimal('35.00'), True, 130, Decimal('0.27'), 0, Decimal('0.24'),
+     """DETALLE PLAN DE PRECIO: PLAN TSC16 - Abono: $ 35.00 Pesos
+Libres en el Plan: $35.00
+Precios sin imp ni cargo ENARD Ley 26573
+Min. destino a teléfonos fijos: $ 0.27 $ 0.27
+Min. destino a móviles del cliente: $ 0.00 $ 0.00
+Min. destino a móviles: $0.27 $ 0.27
+Los SMS no están incluídos en el abono, cada uno sale $ 0.24.
+"""),
+    ('TCL16', Decimal('35.00'), True, 130, Decimal('0.27'), 0, Decimal('0.24'),
      """DETALLE PLAN DE PRECIO: PLAN TCL16 - Abono: $ 35.00 Pesos
 Libres en el Plan:$ 35.00
 Precios sin imp ni cargo ENARD Ley 26573
 Min. destino a teléfonos fijos: $ 0.27 $ 0.27
 Min. destino a móviles del cliente: $ 0.00 $ 0.00
 Min. destino a móviles: $0.27 $ 0.27
-Los SMS no están incluídos en el abono, cada uno sale $ 0.10"""),
+Los SMS no están incluídos en el abono, cada uno sale $ 0.24.
+"""),
 )
 leaders = (
     ('Anthony', 'Lenton', 'antoniolenton@gmail.com'),
@@ -53,14 +73,11 @@ phones = (
 
 
 def main():
-    plans = {}
-    for i, j, k, l, min_price, sms_price, desc in all_plans:
-        plans[i] = Plan.objects.create(name=i, price=j, with_clearing=k,
-                                       minutes=l, min_price=min_price,
-                                       sms_price=sms_price, description=desc)
 
     User.objects.create_superuser(
         username='admin', email='fleetthis@gmail.com', password='admin')
+
+    Group.objects.create()
 
     users = {}
     for fn, ln, email in leaders:
@@ -69,6 +86,25 @@ def main():
             username=username, email=email, first_name=fn, last_name=ln,
             password=User.objects.make_random_password(),
         )
+
+    the_fleet = Fleet.objects.create(
+        owner=users['walini'], account_number=725615496,
+        email='fleetthis@gmail.com', provider='Claro',
+    )
+    naty = users['nbidart']
+    for username, user in users.iteritems():
+        profile = user.get_profile()
+        profile.leader = naty
+        profile.fleet = the_fleet
+        profile.save()
+
+    plans = {}
+    for i, j, k, mins, min_price, sms, sms_price, desc in all_plans:
+        plans[i] = Plan.objects.create(name=i, price=j, with_clearing=k,
+                                       included_minutes=mins,
+                                       min_price=min_price,
+                                       included_sms=sms, sms_price=sms_price,
+                                       description=desc)
 
     tcl16 = plans['TCL16']
     for leader, notes, number in phones:
