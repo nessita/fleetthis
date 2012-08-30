@@ -3,7 +3,6 @@ from collections import defaultdict
 from cStringIO import StringIO
 from unittest import TestCase
 
-
 import pep8
 
 from mock import patch

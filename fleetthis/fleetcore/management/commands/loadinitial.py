@@ -7,7 +7,8 @@ from fleetthis.fleetcore.models import Fleet, Plan, Phone
 
 PLANS = (
     # ('XMD01', 2200, True), ('INTRC', 9507, False),
-    ('TCM07', Decimal('35.00'), True, 130, Decimal('0.22'), 100, Decimal('0.07'),
+    ('TCM07', Decimal('35.00'), True, 130,
+     Decimal('0.22'), 100, Decimal('0.07'),
      """DETALLE PLAN DE PRECIO: PLAN TCM07 - Abono: $ 35.00 Pesos
 Libres en el Plan:$ 35.00
 Precios sin imp ni cargo ENARD Ley 26573
@@ -104,15 +105,14 @@ class Command(BaseCommand):
 
         plans = {}
         for i, j, k, mins, min_price, sms, sms_price, desc in PLANS:
-            plans[i] = Plan.objects.create(name=i, price=j, with_clearing=k,
-                                           included_minutes=mins,
-                                           min_price=min_price,
-                                           included_sms=sms, sms_price=sms_price,
-                                           description=desc)
-
+            plans[i] = Plan.objects.create(
+                name=i, price=j, with_clearing=k, included_minutes=mins,
+                min_price=min_price, included_sms=sms, sms_price=sms_price,
+                description=desc,
+            )
         tcl16 = plans['TCL16']
-        for leader, notes, number in PHONES:
+        for leader, note, number in PHONES:
             u = User.objects.get(first_name=leader)
-            Phone.objects.create(number=number, user=u, notes=notes, plan=tcl16)
+            Phone.objects.create(number=number, user=u, notes=note, plan=tcl16)
 
         self.stdout.write('Successfully loaded initial data.\n')

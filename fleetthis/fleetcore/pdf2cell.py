@@ -13,6 +13,14 @@ from pdfminer.pdfinterp import (
     PDFResourceManager,
     process_pdf,
 )
+from pdfminer.pdfparser import (
+    PDFSyntaxError,
+)
+from pdfminer.converter import PDFPageAggregator, HTMLConverter
+from pdfminer.layout import LAParams
+from pdfminer.pdfparser import PDFParser, PDFDocument
+from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+from pdfminer.pdfdevice import PDFDevice
 
 (PHONE_NUMBER, USER, PLAN, MONTHLY_PRICE, SERVICES, REFUNDS,
  INCLUDED_MIN, EXCEEDED_MIN, EXCEEDED_MIN_PRICE,
@@ -31,7 +39,7 @@ def is_phone_row(row):
     return result
 
 
-class CellularConverter(TextConverter):
+class CellularConverter(PDFPageAggregator):  #TextConverter):
     """CellularConverter."""
 
     start_x, start_y = 0, 0  # 222.5, 22.85
@@ -43,8 +51,11 @@ class CellularConverter(TextConverter):
         self._data = []
 
     def process_item(self, item):
+        print '\n\n\n======PROCESS PAGE==========', item
         if not isinstance(item, LTText):
             return
+
+        import pdb; pdb.set_trace()
 
         origin_x = float(item.origin[X])
         if origin_x < self.start_x:
@@ -79,6 +90,9 @@ class CellularConverter(TextConverter):
             self.last_y = item.origin[Y]
             self.last_content.append(t)
 
+    def begin_page(self, page, ctm=None):
+        super(CellularConverter, self).begin_page(page, ctm)
+
     def end_page(self, page):
         super(CellularConverter, self).end_page(page)
 
@@ -86,12 +100,12 @@ class CellularConverter(TextConverter):
         self.last_content = []
         self.is_table_row = False
 
-        page = self.cur_item
-        if page.pageid != self.table_page:
+        logging.debug('ZARAZA: %r', page)
+        if self.pageno != self.table_page + 1:
             # skip all pages that are not the cell phone listing
             return
 
-        for child in page._objs:
+        for child in self.cur_item._objs:
             try:
                 self.process_item(child)
             except AttributeError:
@@ -103,17 +117,64 @@ class CellularConverter(TextConverter):
         for row in self._data:
             self.outfp.write(FIELD_TOKEN.join(row) + '\n')
 
+def from_docs(fname):
+
+    # Open a PDF file.
+    fp = open(fname, 'rb')
+    # Create a PDF parser object associated with the file object.
+    parser = PDFParser(fp)
+    # Create a PDF document object that stores the document structure.
+    doc = PDFDocument()
+    # Connect the parser and document objects.
+    parser.set_document(doc)
+    doc.set_parser(parser)
+    # Supply the password for initialization.
+    # (If no password is set, give an empty string.)
+    password = ''
+    doc.initialize(password)
+    # Check if the document allows text extraction. If not, abort.
+    if not doc.is_extractable:
+        raise PDFTextExtractionNotAllowed
+    # Create a PDF resource manager object that stores shared resources.
+    rsrcmgr = PDFResourceManager()
+
+
+
+    # Set parameters for analysis.
+    laparams = LAParams()
+    # Create a PDF page aggregator object.
+    device = CellularConverter(rsrcmgr, laparams=None)
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
+    #import pdb; pdb.set_trace()
+    for page in doc.get_pages():
+        interpreter.process_page(page)
+        # receive the LTPage object for the page.
+        layout = device.get_result()
+        print '\n\n===LAYOUT FINISHED: ', layout, layout.pageid
+
+    ##converter = PDFConverter(rsrcmgr, sys.stdout)
+
 
 def parse_file(fname, debug=False):
-    rsrc = PDFResourceManager()
+    rsrcmgr = PDFResourceManager()
     if debug:
         fout = sys.stderr
     else:
         fout = open(os.devnull, 'w')
-    device = CellularConverter(rsrc, fout)
-    fp = open(fname, 'rb')
-    process_pdf(rsrc, device, fp)
-    return device._data
+
+    try:
+        fp = open(fname, 'rb')
+    except IOError:
+        return None
+
+    try:
+        device = CellularConverter(rsrcmgr, fout)
+        process_pdf(rsrcmgr, device, fp)
+        result = device._data
+    except PDFSyntaxError:
+        result = []
+
+    return result
 
 
 if __name__ == '__main__':

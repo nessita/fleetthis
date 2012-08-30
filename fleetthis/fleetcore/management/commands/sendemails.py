@@ -138,7 +138,9 @@ class Command(BaseCommand):
                                                  number=p.number) + ': $500')
                 plans.add(p.plan.description)
 
-            total = '100' ##Consumption.objects.filter(bill=this_bill).aggregate(Sum('total'))['total__sum']
+            total = '100'
+            ##Consumption.objects.filter(bill=this_bill).aggregate(
+            ##  Sum('total'))['total__sum']
             send_email_to_leader(who=user.first_name, month=month,
                                  grand_total=total,
                                  phone_details='\n'.join(details),
