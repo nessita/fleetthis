@@ -39,7 +39,7 @@ def is_phone_row(row):
     return result
 
 
-class CellularConverter(PDFPageAggregator):  #TextConverter):
+class CellularConverter(PDFPageAggregator):  # TextConverter):
     """CellularConverter."""
 
     start_x, start_y = 0, 0  # 222.5, 22.85
@@ -55,9 +55,7 @@ class CellularConverter(PDFPageAggregator):  #TextConverter):
         if not isinstance(item, LTText):
             return
 
-        import pdb; pdb.set_trace()
-
-        origin_x = float(item.origin[X])
+        origin_x = float(item.x0)
         if origin_x < self.start_x:
             return
 
@@ -72,7 +70,7 @@ class CellularConverter(PDFPageAggregator):  #TextConverter):
                       self.start_x, self.last_x, origin_x > self.last_x)
 
         if origin_x > self.last_x:  # is a new row?
-            self.last_x, self.last_y = item.origin
+            self.last_x, self.last_y = item.x0, item.y0
 
             if self.is_table_row:
                 # store previous content
@@ -83,11 +81,11 @@ class CellularConverter(PDFPageAggregator):  #TextConverter):
             self.is_table_row = (PHONE_TOKEN in t and
                                  t.strip().replace(PHONE_TOKEN, '').isdigit())
             self.last_content = [t]  # new content
-        elif item.origin[Y] == self.last_y:  # is the same table cell?
+        elif item.y0 == self.last_y:  # is the same table cell?
             self.last_content[-1] += t
         else:  # new table cell for current row
             assert self.last_x == origin_x
-            self.last_y = item.origin[Y]
+            self.last_y = item.y0
             self.last_content.append(t)
 
     def begin_page(self, page, ctm=None):
@@ -117,8 +115,8 @@ class CellularConverter(PDFPageAggregator):  #TextConverter):
         for row in self._data:
             self.outfp.write(FIELD_TOKEN.join(row) + '\n')
 
-def from_docs(fname):
 
+def from_docs(fname):
     # Open a PDF file.
     fp = open(fname, 'rb')
     # Create a PDF parser object associated with the file object.
@@ -137,8 +135,6 @@ def from_docs(fname):
         raise PDFTextExtractionNotAllowed
     # Create a PDF resource manager object that stores shared resources.
     rsrcmgr = PDFResourceManager()
-
-
 
     # Set parameters for analysis.
     laparams = LAParams()
