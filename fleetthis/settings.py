@@ -152,3 +152,9 @@ LOGGING = {
 }
 
 AUTH_PROFILE_MODULE = 'fleetcore.UserProfile'
+
+
+try:
+    from fleetthis.local_settings import *
+except ImportError:
+    pass
