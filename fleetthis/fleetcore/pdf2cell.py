@@ -7,8 +7,8 @@ import sys
 from pdfminer.converter import (
     enc,
     TextConverter,
-    LTText,
 )
+from pdfminer.layout import *
 from pdfminer.pdfinterp import (
     PDFResourceManager,
     process_pdf,
@@ -27,146 +27,90 @@ from pdfminer.pdfdevice import PDFDevice
  NDL_MIN, NDL_PRICE, IDL_MIN, IDL_PRICE,
  SMS, SMS_PRICE, EQUIPMENT_PRICE, OTHER_PRICE, TOTAL_PRICE) = range(18)
 
-FIELD_TOKEN = '|'
 PHONE_TOKEN = '-'
-X = 0
-Y = 1
 
 
-def is_phone_row(row):
-    result = (len(row) == 11 and PHONE_TOKEN in row and
-              row.strip().replace(PHONE_TOKEN, '').isdigit())
-    return result
-
-
-class CellularConverter(PDFPageAggregator):  # TextConverter):
+class CellularConverter(PDFPageAggregator):
     """CellularConverter."""
 
-    start_x, start_y = 0, 0  # 222.5, 22.85
-    processing_started = False
     table_page = 7
+    phone_length = 11
+    notes_length = 30
 
-    def __init__(self, *args, **kwargs):
-        super(CellularConverter, self).__init__(*args, **kwargs)
+    def __init__(self, input_fd, *args, **kwargs):
         self._data = []
+        # Create a PDF parser object associated with the file object.
+        parser = PDFParser(input_fd)
+        # Create a PDF document object that stores the document structure.
+        self.doc = PDFDocument()
+        # Connect the parser and document objects.
+        parser.set_document(self.doc)
+        self.doc.set_parser(parser)
+        # Supply the password for initialization.
+        # (If no password is set, give an empty string.)
+        password = ''
+        self.doc.initialize(password)
+        # Check if the document allows text extraction. If not, abort.
+        if not self.doc.is_extractable:
+            raise PDFTextExtractionNotAllowed
+        # Create a PDF resource manager object that stores shared resources.
+        self.rsrcmgr = PDFResourceManager()
+        # Set parameters for analysis.
+        laparams = None  # LAParams()
+        super(CellularConverter, self).__init__(self.rsrcmgr,
+                                                laparams=laparams,
+                                                *args, **kwargs)
 
-    def process_item(self, item):
-        print '\n\n\n======PROCESS PAGE==========', item
-        if not isinstance(item, LTText):
-            return
+    def is_phone_row(self, row):
+        result = (len(row) == self.phone_length and PHONE_TOKEN in row and
+                  row.strip().replace(PHONE_TOKEN, '').isdigit())
+        return result
 
-        origin_x = float(item.x0)
-        if origin_x < self.start_x:
-            return
+    def process_phone_row(self, row):
+        i = self.phone_length
+        j = self.phone_length + self.notes_length
+        phone = row[:i]
+        if self.is_phone_row(phone):
+            notes = row[i:j].strip()
+            rest = row[j:].split()
+            plan = rest[0]
+            rest = rest[1:]  # all the numeric values, isolate them for casting
+            self._data.append(
+                [phone, notes, plan] +
+                [float(i.strip().replace(',', '.')) for i in rest]
+            )
 
-        t = enc(item.text, self.codec)
-        if is_phone_row(t):
-            self.processing_started = True
-
-        if not self.processing_started:
-            return
-
-        logging.debug('%r ===== %r %r %r %r %r', item.text, t, origin_x,
-                      self.start_x, self.last_x, origin_x > self.last_x)
-
-        if origin_x > self.last_x:  # is a new row?
-            self.last_x, self.last_y = item.x0, item.y0
-
-            if self.is_table_row:
-                # store previous content
-                self._data.append(map(str.strip, self.last_content))
+    def process_page(self, layout):
+        last_text = []
+        for item in layout:
+            if getattr(item, 'get_text', None) is not None:
+                last_text.append(item.get_text())
             else:
-                logging.debug("is not table row: %r", self.last_content)
+                line = ''.join(last_text)
+                last_text = []
+                if line:
+                    self.process_phone_row(line)
 
-            self.is_table_row = (PHONE_TOKEN in t and
-                                 t.strip().replace(PHONE_TOKEN, '').isdigit())
-            self.last_content = [t]  # new content
-        elif item.y0 == self.last_y:  # is the same table cell?
-            self.last_content[-1] += t
-        else:  # new table cell for current row
-            assert self.last_x == origin_x
-            self.last_y = item.y0
-            self.last_content.append(t)
-
-    def begin_page(self, page, ctm=None):
-        super(CellularConverter, self).begin_page(page, ctm)
-
-    def end_page(self, page):
-        super(CellularConverter, self).end_page(page)
-
-        self.last_x, self.last_y = self.start_x, self.start_y
-        self.last_content = []
-        self.is_table_row = False
-
-        logging.debug('ZARAZA: %r', page)
-        if self.pageno != self.table_page + 1:
-            # skip all pages that are not the cell phone listing
-            return
-
-        for child in self.cur_item._objs:
-            try:
-                self.process_item(child)
-            except AttributeError:
-                pass
-
-        self.to_file()
-
-    def to_file(self):
-        for row in self._data:
-            self.outfp.write(FIELD_TOKEN.join(row) + '\n')
+    def gather_phone_info(self):
+        interpreter = PDFPageInterpreter(self.rsrcmgr, self)
+        for page in self.doc.get_pages():
+            interpreter.process_page(page)
+            # receive the LTPage object for the page.
+            layout = self.get_result()
+            if layout.pageid == 7:
+                self.process_page(layout)
+        return self._data
 
 
-def from_docs(fname):
-    # Open a PDF file.
-    fp = open(fname, 'rb')
-    # Create a PDF parser object associated with the file object.
-    parser = PDFParser(fp)
-    # Create a PDF document object that stores the document structure.
-    doc = PDFDocument()
-    # Connect the parser and document objects.
-    parser.set_document(doc)
-    doc.set_parser(parser)
-    # Supply the password for initialization.
-    # (If no password is set, give an empty string.)
-    password = ''
-    doc.initialize(password)
-    # Check if the document allows text extraction. If not, abort.
-    if not doc.is_extractable:
-        raise PDFTextExtractionNotAllowed
-    # Create a PDF resource manager object that stores shared resources.
-    rsrcmgr = PDFResourceManager()
-
-    # Set parameters for analysis.
-    laparams = LAParams()
-    # Create a PDF page aggregator object.
-    device = CellularConverter(rsrcmgr, laparams=None)
-    interpreter = PDFPageInterpreter(rsrcmgr, device)
-    #import pdb; pdb.set_trace()
-    for page in doc.get_pages():
-        interpreter.process_page(page)
-        # receive the LTPage object for the page.
-        layout = device.get_result()
-        print '\n\n===LAYOUT FINISHED: ', layout, layout.pageid
-
-    ##converter = PDFConverter(rsrcmgr, sys.stdout)
-
-
-def parse_file(fname, debug=False):
-    rsrcmgr = PDFResourceManager()
-    if debug:
-        fout = sys.stderr
-    else:
-        fout = open(os.devnull, 'w')
-
+def parse_file(fname):
     try:
-        fp = open(fname, 'rb')
+        input_fd = open(fname, 'rb')
     except IOError:
         return None
 
     try:
-        device = CellularConverter(rsrcmgr, fout)
-        process_pdf(rsrcmgr, device, fp)
-        result = device._data
+        device = CellularConverter(input_fd)
+        result = device.gather_phone_info()
     except PDFSyntaxError:
         result = []
 
