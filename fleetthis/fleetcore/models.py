@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from django.contrib.auth.models import User
@@ -60,6 +61,16 @@ class MinuteField(models.DecimalField):
         super(MinuteField, self).__init__(*args, **default)
 
 
+class Fleet(models.Model):
+    owner = models.ForeignKey(User)
+    account_number = models.PositiveIntegerField()
+    email = models.EmailField()
+    provider = models.CharField(max_length=100)
+
+    def __unicode__(self):
+        return u'Fleet %s - %s' % (self.provider, self.account_number)
+
+
 class Plan(models.Model):
     name = models.CharField(max_length=100)
     with_clearing = models.BooleanField()
@@ -84,20 +95,11 @@ class Phone(models.Model):
         return u'%s - %s' % (self.number, self.user)
 
 
-class Fleet(models.Model):
-    owner = models.ForeignKey(User)
-    account_number = models.PositiveIntegerField()
-    email = models.EmailField()
-    provider = models.CharField(max_length=100)
-
-    def __unicode__(self):
-        return u'Fleet %s - %s' % (self.provider, self.account_number)
-
-
 class Bill(models.Model):
     fleet = models.ForeignKey(Fleet)
     invoice = models.FileField(upload_to='invoices')
-    billing_date = models.DateField()  # billing date
+    billing_date = models.DateField(default=datetime.today())  # billing date
+    provider_number = models.CharField(max_length=50, blank=True)
     internal_tax = TaxField(default=Decimal('0.0417'))
     iva_tax = TaxField(default=Decimal('0.27'))
     other_tax = TaxField(default=Decimal('0.01'))
@@ -180,7 +182,7 @@ def parse_invoice(bill):
     # parse invoice
     fname = bill.invoice.path
     data = pdf2cell.parse_file(fname)
-    for d in data:
+    for d in data.get('phone_data', []):
         phone = Phone.objects.get(number=d[PHONE_NUMBER])
         kwargs = dict(
             reported_user=d[USER],
@@ -202,6 +204,12 @@ def parse_invoice(bill):
             reported_total=d[TOTAL_PRICE],
         )
         Consumption.objects.create(phone=phone, bill=bill, **kwargs)
+
+    bill_date = data.get('bill_date')
+    if bill_date:
+        bill.billing_date = bill_date
+    bill.provider_number = data.get('bill_number', '')
+    bill.save()
 
 
 def create_user_profile(sender, instance, created, **kwargs):

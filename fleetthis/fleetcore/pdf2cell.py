@@ -4,6 +4,8 @@ import logging
 import os
 import sys
 
+from datetime import datetime
+
 from pdfminer.converter import (
     enc,
     TextConverter,
@@ -33,11 +35,15 @@ PHONE_TOKEN = '-'
 class CellularConverter(PDFPageAggregator):
     """CellularConverter."""
 
-    table_page = 7
-    phone_length = 11
+    bill_number_length = 13
+    date_length = 10
     notes_length = 30
+    phone_length = 11
+    table_page = 7
 
     def __init__(self, input_fd, *args, **kwargs):
+        self._bill_date = None
+        self._bill_number = None
         self._data = []
         # Create a PDF parser object associated with the file object.
         parser = PDFParser(input_fd)
@@ -66,7 +72,7 @@ class CellularConverter(PDFPageAggregator):
                   row.strip().replace(PHONE_TOKEN, '').isdigit())
         return result
 
-    def process_phone_row(self, row):
+    def _process_phone_row(self, row):
         i = self.phone_length
         j = self.phone_length + self.notes_length
         phone = row[:i]
@@ -80,16 +86,28 @@ class CellularConverter(PDFPageAggregator):
                 [float(i.strip().replace(',', '.')) for i in rest]
             )
 
-    def process_page(self, layout):
+    def _extract_text(self, page, fn):
         last_text = []
-        for item in layout:
+        for item in page:
             if getattr(item, 'get_text', None) is not None:
                 last_text.append(item.get_text())
             else:
                 line = ''.join(last_text)
                 last_text = []
                 if line:
-                    self.process_phone_row(line)
+                    fn(line)
+
+    def _process_front_page(self, line):
+        idx = line.find('Fecha de Factura')
+        if idx != 1 and self._bill_date is None:
+            idx += len('Fecha de Factura')
+            bill_date_str = line[idx:idx + self.date_length]
+            self._bill_date = datetime.strptime(bill_date_str, "%d/%m/%Y")
+
+        idx = line.find('Factura Nro.')
+        if idx != 1 and self._bill_number is None:
+            idx += len('Factura Nro.')
+            self._bill_number = line[idx:idx + self.bill_number_length]
 
     def gather_phone_info(self):
         interpreter = PDFPageInterpreter(self.rsrcmgr, self)
@@ -97,9 +115,13 @@ class CellularConverter(PDFPageAggregator):
             interpreter.process_page(page)
             # receive the LTPage object for the page.
             layout = self.get_result()
-            if layout.pageid == 7:
-                self.process_page(layout)
-        return self._data
+            if layout.pageid == 1:
+                self._extract_text(layout, self._process_front_page)
+            elif layout.pageid == self.table_page:
+                self._extract_text(layout, self._process_phone_row)
+
+        return {'bill_date': self._bill_date, 'bill_number': self._bill_number,
+                'phone_data': self._data}
 
 
 def parse_file(fname):
@@ -112,7 +134,7 @@ def parse_file(fname):
         device = CellularConverter(input_fd)
         result = device.gather_phone_info()
     except PDFSyntaxError:
-        result = []
+        result = {}
 
     return result
 
