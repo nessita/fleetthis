@@ -1,4 +1,7 @@
-#!/usr/bin/env python
+# coding: utf-8
+
+from __future__ import unicode_literals
+from __future__ import print_function
 
 import logging
 import os
@@ -144,6 +147,6 @@ def parse_file(fname):
 if __name__ == '__main__':
     fname = sys.argv[1]  # fail if no filename is given
     data = parse_file(fname)
-    print '-----------------------------'
-    print data
-    print '-----------------------------'
+    print('-----------------------------')
+    print(data)
+    print('-----------------------------')

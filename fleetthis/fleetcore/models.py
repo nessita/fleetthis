@@ -1,3 +1,8 @@
+# coding: utf-8
+
+from __future__ import unicode_literals
+from __future__ import print_function
+
 from datetime import datetime
 from decimal import Decimal
 
@@ -68,7 +73,7 @@ class Fleet(models.Model):
     provider = models.CharField(max_length=100)
 
     def __unicode__(self):
-        return u'Fleet %s - %s' % (self.provider, self.account_number)
+        return '%s - %s' % (self.provider, self.account_number)
 
 
 class Plan(models.Model):
@@ -82,7 +87,8 @@ class Plan(models.Model):
     description = models.TextField(blank=True)
 
     def __unicode__(self):
-        return u'%s - $%s' % (self.name, self.price)
+        clearing = 'with' if self.with_clearing else 'no'
+        return '%s - $%s (%s clearing)' % (self.name, self.price, clearing)
 
 
 class Phone(models.Model):
@@ -92,7 +98,7 @@ class Phone(models.Model):
     notes = models.TextField(blank=True)
 
     def __unicode__(self):
-        return u'%s - %s' % (self.number, self.user)
+        return '%s - %s' % (self.number, self.user.get_full_name())
 
 
 class Bill(models.Model):
@@ -112,7 +118,7 @@ class Bill(models.Model):
         return self.internal_tax + self.iva_tax + self.other_tax
 
     def __unicode__(self):
-        return u'Bill %s (%s)' % (self.billing_date, self.fleet)
+        return 'Bill %s (%s)' % (self.billing_date, self.fleet)
 
 
 class Consumption(models.Model):
@@ -120,23 +126,23 @@ class Consumption(models.Model):
     bill = models.ForeignKey(Bill)
 
     # every field (literal) from the invoice
-    reported_user = models.CharField(max_length=500, blank=True)
-    reported_plan = models.CharField(max_length=100, blank=True)
-    monthly_price = MoneyField()
-    services = MoneyField()
-    refunds = MoneyField()
-    included_min = MinuteField()
-    exceeded_min = MinuteField()
-    exceeded_min_price = MoneyField()
-    ndl_min = MinuteField()
-    ndl_min_price = MoneyField()
-    idl_min = MinuteField()
-    idl_min_price = MoneyField()
-    sms = models.PositiveIntegerField(default=0)
-    sms_price = MoneyField()
-    equipment_price = MoneyField()
-    other_price = MoneyField()
-    reported_total = MoneyField()
+    reported_user = models.CharField('Usuario', max_length=500, blank=True)
+    reported_plan = models.CharField('Plan', max_length=100, blank=True)
+    monthly_price = MoneyField('Precio del plan ($)')
+    services = MoneyField('Cargos y servicios ($)')
+    refunds = MoneyField('Reintegros ($)')
+    included_min = MinuteField('Minutos consumidos incluidos en plan')
+    exceeded_min = MinuteField('Minutos consumidos fuera del plan')
+    exceeded_min_price = MoneyField('Minutos consumidos fuera del plan ($)')
+    ndl_min = MinuteField('Discado nacional (minutos)')
+    ndl_min_price = MoneyField('Discado nacional ($)')
+    idl_min = MinuteField('Discado internacional (minutos)')
+    idl_min_price = MoneyField('Discado internacional ($)')
+    sms = models.PositiveIntegerField('Mensajes consumidos', default=0)
+    sms_price = MoneyField('Mensajes consumidos ($)')
+    equipment_price = MoneyField('Equipos ($)')
+    other_price = MoneyField('Varios ($)')
+    reported_total = MoneyField('Total ($)')
 
     # calculated *and* stored in the DB
     total_before_taxes = MoneyField()
@@ -148,12 +154,13 @@ class Consumption(models.Model):
     payed = models.BooleanField()
 
     def __unicode__(self):
-        return self.bill.provider_number + ' - ' + unicode(self.phone.number)
+        return '%s - Factura del %s - %s' % (self.bill.fleet.provider, self.bill.billing_date, self.phone)
 
     def save(self, *args, **kwargs):
+        total = self.reported_total
         plan = self.phone.plan
         if plan.with_clearing:
-            total = self.reported_total - self.monthly_price
+            total -= self.monthly_price
             total += plan.included_minutes * plan.min_price
         else:
             total = self.monthly_price
@@ -176,7 +183,14 @@ class Consumption(models.Model):
 class UserProfile(models.Model):
     user = models.OneToOneField(User)
     leader = models.ForeignKey(User, related_name='leadered_by', null=True)
-    fleet = models.ForeignKey(Fleet, null=True)
+
+    def __unicode__(self):
+        leader = self.leader
+        if self.leader is not None:
+            leader = self.leader.get_full_name() or self.leader
+        if leader:
+            leader = ' (leadered by %s)' % leader
+        return '%s - %s%s' % (self.user, self.user.get_full_name(), leader)
 
 
 def parse_invoice(bill):

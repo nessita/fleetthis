@@ -1,5 +1,7 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+# coding: utf-8
+
+from __future__ import unicode_literals
+from __future__ import print_function
 
 import csv
 import os
@@ -16,20 +18,20 @@ from fleetthis.fleetcore.models import Plan, Phone
 
 
 PEOPLE = {
-    u'Anthony': [u'antoniolenton@gmail.com'],
-    u'Nelson': [u'nelson.bordese@gmail.com'],
-    u'Natalia': [u'mbordese@gmail.com', u'nataliabidart@gmail.com'],
-    u'Kuka': [u'karimoroni@gmail.com'],
-    u'Walter': [u'walteralini@gmail.com'],
+    'Anthony': ['antoniolenton@gmail.com'],
+    'Nelson': ['nelson.bordese@gmail.com'],
+    'Natalia': ['mbordese@gmail.com', 'nataliabidart@gmail.com'],
+    'Kuka': ['karimoroni@gmail.com'],
+    'Walter': ['walteralini@gmail.com'],
 }
 
 ME = 'fleetthis@gmail.com'
 
-PHONE_LINE = u'%(real_user)s - Plan %(plan_name)s - %(number)s'
+PHONE_LINE = '%(real_user)s - Plan %(plan_name)s - %(number)s'
 
-SUBJECT = u'Total del celu (consumo de %s)'
+SUBJECT = 'Total del celu (consumo de %s)'
 
-BODY = u"""Hola %(leader)s!
+BODY = """Hola %(leader)s!
 
 A continuación el detalle del consumo del mes %(month)s, detallado por nro. de
 teléfono/persona:
