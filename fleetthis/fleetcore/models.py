@@ -154,7 +154,9 @@ class Consumption(models.Model):
     payed = models.BooleanField()
 
     def __unicode__(self):
-        return '%s - Factura del %s - %s' % (self.bill.fleet.provider, self.bill.billing_date, self.phone)
+        return '%s - Factura del %s - %s' % (self.bill.fleet.provider,
+                                             self.bill.billing_date,
+                                             self.phone)
 
     def save(self, *args, **kwargs):
         total = self.reported_total

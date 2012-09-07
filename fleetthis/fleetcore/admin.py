@@ -16,13 +16,6 @@ from fleetthis.fleetcore.models import (
 )
 
 
-admin.site.register(Bill)
-admin.site.register(Fleet)
-admin.site.register(Phone)
-admin.site.register(Plan)
-admin.site.register(UserProfile)
-
-
 class ConsumptionAdmin(admin.ModelAdmin):
     """Admin class for Consumption."""
     search_fields = ('phone__user__username', 'phone__user__first_name',
@@ -38,14 +31,21 @@ class ConsumptionAdmin(admin.ModelAdmin):
         }),
         ('Factura', {
             'classes': ('collapse',),
-            'fields': ('reported_user', 'reported_plan', 'monthly_price',
-                       ('services', 'refunds'), 'included_min',
-                       ('exceeded_min', 'exceeded_min_price'),
-                       ('ndl_min', 'ndl_min_price'),
-                       ('idl_min', 'idl_min_price'), ('sms', 'sms_price'),
-                       ('equipment_price', 'other_price'), 'reported_total',
-                      )
+            'fields': (
+                'reported_user', 'reported_plan', 'monthly_price',
+                ('services', 'refunds'), 'included_min',
+                ('exceeded_min', 'exceeded_min_price'),
+                ('ndl_min', 'ndl_min_price'),
+                ('idl_min', 'idl_min_price'), ('sms', 'sms_price'),
+                ('equipment_price', 'other_price'), 'reported_total',
+            )
         }),
     )
 
+
+admin.site.register(Bill)
 admin.site.register(Consumption, ConsumptionAdmin)
+admin.site.register(Fleet)
+admin.site.register(Phone)
+admin.site.register(Plan)
+admin.site.register(UserProfile)

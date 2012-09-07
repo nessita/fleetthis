@@ -6,3 +6,4 @@ from __future__ import print_function
 from .test_codestyle import *
 from .test_models import *
 from .test_pdf2cell import *
+from .test_views import *
