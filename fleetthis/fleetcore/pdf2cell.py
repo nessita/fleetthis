@@ -5,6 +5,7 @@ import os
 import sys
 
 from datetime import datetime
+from decimal import Decimal
 
 from pdfminer.converter import (
     enc,
@@ -75,15 +76,16 @@ class CellularConverter(PDFPageAggregator):
     def _process_phone_row(self, row):
         i = self.phone_length
         j = self.phone_length + self.notes_length
-        phone = row[:i]
-        if self.is_phone_row(phone):
+        phone = row[:i].replace(PHONE_TOKEN, '') if PHONE_TOKEN in row else ''
+        if phone.isdigit():
+            phone = int(phone)
             notes = row[i:j].strip()
             rest = row[j:].split()
             plan = rest[0]
             rest = rest[1:]  # all the numeric values, isolate them for casting
             self._data.append(
                 [phone, notes, plan] +
-                [float(i.strip().replace(',', '.')) for i in rest]
+                [Decimal(i.strip().replace(',', '.')) for i in rest]
             )
 
     def _extract_text(self, page, fn):

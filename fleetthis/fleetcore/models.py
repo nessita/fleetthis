@@ -148,12 +148,13 @@ class Consumption(models.Model):
     payed = models.BooleanField()
 
     def __unicode__(self):
-        return self.period
+        return self.bill.provider_number + ' - ' + unicode(self.phone.number)
 
     def save(self, *args, **kwargs):
-        if self.phone.plan.is_clearing:
+        plan = self.phone.plan
+        if plan.with_clearing:
             total = self.reported_total - self.monthly_price
-            total += self.included_minutes * phone.plan.minute_price
+            total += plan.included_minutes * plan.min_price
         else:
             total = self.monthly_price
 
@@ -162,7 +163,7 @@ class Consumption(models.Model):
         self.total_before_taxes = total
         self.taxes = self.bill.taxes
         self.total_before_round = (self.total_before_taxes *
-                                   (Decimal('1') + taxes))
+                                   (Decimal('1') + self.taxes))
         self.total = round(self.total_before_round)
         super(Consumption, self).save(*args, **kwargs)
 
@@ -183,7 +184,10 @@ def parse_invoice(bill):
     fname = bill.invoice.path
     data = pdf2cell.parse_file(fname)
     for d in data.get('phone_data', []):
-        phone = Phone.objects.get(number=d[PHONE_NUMBER])
+        try:
+            phone = Phone.objects.get(number=d[PHONE_NUMBER])
+        except Phone.DoesNotExist:
+            continue
         kwargs = dict(
             reported_user=d[USER],
             reported_plan=d[PLAN],
