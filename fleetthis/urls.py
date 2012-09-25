@@ -10,6 +10,7 @@ admin.autodiscover()
 
 
 urlpatterns = patterns('',
-    url(r'^$', include('fleetthis.fleetcore.urls')),
     url(r'^admin/', include(admin.site.urls)),
+    url(r'^users/', include('fleetthis.users.urls')),
+    url(r'^fleetthis/', include('fleetthis.fleetcore.urls')),
 )

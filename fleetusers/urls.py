@@ -7,7 +7,8 @@ from django.conf.urls import patterns, include, url
 
 
 urlpatterns = patterns(
-    'fleetthis.fleetcore.views',
-    url(r'^$', 'home', name='home'),
-    url(r'^login/$', 'do_login', name='login'),
+    'django.contrib.auth.views',
+    url(r'^login/$', 'login', dict(template_name='users/login.html'),
+        name='login'),
+    url(r'^logout/$', 'logout', name='login'),
 )
