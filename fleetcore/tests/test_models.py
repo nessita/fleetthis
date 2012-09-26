@@ -12,13 +12,12 @@ from django.contrib.auth.models import User
 from django.core.files import File
 from mock import patch
 
-from fleetthis.fleetcore.models import (
+from fleetcore.models import (
     Bill,
     Consumption,
     Fleet,
     Phone,
     Plan,
-    UserProfile,
     parse_invoice,
 )
 
@@ -72,18 +71,12 @@ class FleetTestCase(TestCase):
     model = Fleet
 
 
-class UserProfileTestCase(TestCase):
-    """The test suite for the UserProfile model."""
-
-    model = UserProfile
-
-
 class ParceInvoiceTestCase(TestCase):
     """The test suite for the parse_invoice method."""
 
     def setUp(self):
         super(ParceInvoiceTestCase, self).setUp()
-        patcher = patch('fleetthis.fleetcore.models.pdf2cell.parse_file')
+        patcher = patch('fleetcore.models.pdf2cell.parse_file')
         self.mock_pdf_parser = patcher.start()
         self.addCleanup(patcher.stop)
 

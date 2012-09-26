@@ -8,7 +8,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import Group, User
-from fleetthis.fleetcore.models import Fleet, Plan, Phone
+from fleetcore.models import Fleet, Plan, Phone
 
 
 PLANS = (

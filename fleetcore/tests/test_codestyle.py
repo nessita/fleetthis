@@ -14,7 +14,7 @@ import pep8
 from mock import patch
 from pyflakes.scripts.pyflakes import checkPath
 
-import fleetthis.fleetcore
+import fleetcore
 
 
 class PackagePep8TestCase(TestCase):
@@ -54,7 +54,7 @@ class PackagePep8TestCase(TestCase):
 
 class FleetCorePep8TestCase(PackagePep8TestCase):
 
-    packages = [fleetthis.fleetcore]
+    packages = [fleetcore]
 
 
 class PyFlakesTestCase(TestCase):

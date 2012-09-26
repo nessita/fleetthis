@@ -10,8 +10,8 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
 
-from fleetthis.fleetcore import pdf2cell
-from fleetthis.fleetcore.pdf2cell import (
+from fleetcore import pdf2cell
+from fleetcore.pdf2cell import (
     EQUIPMENT_PRICE,
     EXCEEDED_MIN,
     EXCEEDED_MIN_PRICE,
@@ -182,19 +182,6 @@ class Consumption(models.Model):
         unique_together = ('phone', 'bill')
 
 
-class UserProfile(models.Model):
-    user = models.OneToOneField(User)
-    leader = models.ForeignKey(User, related_name='leadered_by', null=True)
-
-    def __unicode__(self):
-        leader = self.leader
-        if self.leader is not None:
-            leader = self.leader.get_full_name() or self.leader
-        if leader:
-            leader = ' (leadered by %s)' % leader
-        return '%s - %s%s' % (self.user, self.user.get_full_name(), leader)
-
-
 def parse_invoice(bill):
     # parse invoice
     fname = bill.invoice.path
@@ -232,15 +219,9 @@ def parse_invoice(bill):
     bill.save()
 
 
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        UserProfile.objects.create(user=instance)
-
-
 def process_bill(sender, instance, created, **kwargs):
     if created:
         parse_invoice(instance)
 
 
-post_save.connect(create_user_profile, sender=User)
 post_save.connect(process_bill, sender=Bill)

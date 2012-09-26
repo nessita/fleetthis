@@ -10,7 +10,7 @@ from datetime import datetime
 from decimal import Decimal
 from unittest import TestCase
 
-from fleetthis.fleetcore import pdf2cell
+from fleetcore import pdf2cell
 
 
 THE_RESULT = {

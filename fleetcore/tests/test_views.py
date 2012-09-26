@@ -17,25 +17,25 @@ class BaseViewTestCase(TestCase):
 
     def setUp(self):
         super(BaseViewTestCase, self).setUp()
-        self.user = User.objects.create(username=self.username,
-                                        password=self.password)
+        self.user = User.objects.create_user(username=self.username,
+                                             password=self.password)
 
     def test_home(self):
         response = self.client.get(reverse('home'))
-        self.assertRedirects(response, reverse('login'))
+        expected = reverse('login') + '?next=' + reverse('home')
+        self.assertRedirects(response, expected)
 
 
-class HomeTestCase(BaseViewTestCase):
+class AuthenticatedTestCase(BaseViewTestCase):
     """The test suite for the home view."""
 
     def setUp(self):
-        super(BaseViewTestCase, self).setUp()
+        super(AuthenticatedTestCase, self).setUp()
+        self.client.login(username=self.username, password=self.password)
 
     def test_home(self):
-        self.client.login(username=self.username, password=self.password)
         response = self.client.get(reverse('home'))
         self.assertContains(response, 'Home')
+        self.assertContains(response,
+                            '<a href="%s">Logout</a>' % reverse('logout'))
         self.assertTemplateUsed(response, 'index.html')
-
-    def test_upload_new_bill(self):
-        pass

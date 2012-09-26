@@ -1,16 +1,23 @@
-"""
-This file demonstrates writing tests using the unittest module. These will pass
-when you run "manage.py test".
+# coding: utf-8
 
-Replace this with more appropriate tests for your application.
-"""
+from __future__ import unicode_literals
+from __future__ import print_function
 
-from django.test import TestCase
+import logging
+import os
+
+from unittest import TestCase
+
+from django.contrib.auth.models import User
+
+from fleetusers.models import (
+    UserProfile,
+)
 
 
-class SimpleTest(TestCase):
-    def test_basic_addition(self):
-        """
-        Tests that 1 + 1 always equals 2.
-        """
-        self.assertEqual(1 + 1, 2)
+class UserProfileTestCase(TestCase):
+    """The test suite for the UserProfile model."""
+
+    def test_created_with_user_creation(self):
+        user = User.objects.create(username='foo')
+        self.assertIsInstance(user.get_profile(), UserProfile)

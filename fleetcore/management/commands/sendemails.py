@@ -14,7 +14,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Sum
 from django.contrib.auth.models import User
 
-from fleetthis.fleetcore.models import Plan, Phone
+from fleetcore.models import Plan, Phone
 
 
 PEOPLE = {

@@ -152,8 +152,11 @@ LOGGING = {
     }
 }
 
-AUTH_PROFILE_MODULE = 'fleetcore.UserProfile'
-
+AUTH_PROFILE_MODULE = 'fleetusers.UserProfile'
+from django.core.urlresolvers import reverse
+LOGIN_REDIRECT_URL = reverse('home')
+LOGIN_URL = reverse('login')
+LOGOUT_URL = reverse('logout')
 
 try:
     from fleetthis.local_settings import *
