@@ -3,10 +3,12 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
+from django.conf.urls import patterns
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 
+from fleetusers.models import UserProfile
 from fleetcore.models import (
     Bill,
     Consumption,
@@ -14,6 +16,23 @@ from fleetcore.models import (
     Phone,
     Plan,
 )
+
+
+class FleetCoreAdminSite(admin.AdminSite):
+
+    def get_urls(self):
+        urls = super(FleetCoreAdminSite, self).get_urls()
+        my_urls = patterns('',
+            (r'^my_view/$', self.admin_view(self.my_view))
+        )
+        return my_urls + urls
+
+    def my_view(self, request):
+        # custom view which should return an HttpResponse
+        print('WORKED')
+
+
+fleet_admin = FleetCoreAdminSite(name='fleetcore-admin')
 
 
 class ConsumptionAdmin(admin.ModelAdmin):
@@ -43,8 +62,10 @@ class ConsumptionAdmin(admin.ModelAdmin):
     )
 
 
-admin.site.register(Bill)
-admin.site.register(Consumption, ConsumptionAdmin)
-admin.site.register(Fleet)
-admin.site.register(Phone)
-admin.site.register(Plan)
+fleet_admin.register(Bill)
+fleet_admin.register(Consumption, ConsumptionAdmin)
+fleet_admin.register(Fleet)
+fleet_admin.register(Phone)
+fleet_admin.register(Plan)
+fleet_admin.register(User)
+fleet_admin.register(UserProfile)
