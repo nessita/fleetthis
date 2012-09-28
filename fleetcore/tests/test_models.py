@@ -9,7 +9,6 @@ import os
 from unittest import TestCase
 
 from django.contrib.auth.models import User
-from django.core.files import File
 from mock import patch
 
 from fleetcore.models import (
@@ -18,7 +17,6 @@ from fleetcore.models import (
     Fleet,
     Phone,
     Plan,
-    parse_invoice,
 )
 
 
@@ -33,6 +31,7 @@ class BaseModelTestCase(TestCase):
         self.obj = None
         if self.model is not None:
             self.obj = self.model.objects.create(**self.kwargs)
+            self.addCleanup(self.obj.delete)
 
     def test_id(self):
         """Model can be created and stored."""
@@ -41,59 +40,71 @@ class BaseModelTestCase(TestCase):
             self.obj.save()
 
 
-class BillTestCase(TestCase):
+class BillTestCase(BaseModelTestCase):
     """The test suite for the Bill model."""
 
     model = Bill
 
+    def setUp(self):
+        user = User.objects.create_user(username='fleet-owner')
+        self.addCleanup(user.delete)
+        fleet = Fleet.objects.create(owner=user, account_number=24680)
+        self.addCleanup(fleet.delete)
+        self.kwargs = dict(fleet=fleet, invoice='zaraza.pdf')
+        super(BillTestCase, self).setUp()
 
-class ConsumptionTestCase(TestCase):
+
+class ConsumptionTestCase(BaseModelTestCase):
     """The test suite for the Consumption model."""
 
     model = Consumption
 
+    def setUp(self):
+        user = User.objects.create_user(username='fleet-owner')
+        self.addCleanup(user.delete)
+        fleet = Fleet.objects.create(owner=user, account_number=24680)
+        self.addCleanup(fleet.delete)
+        bill = Bill.objects.create(fleet=fleet, invoice='yadda.pdf')
+        self.addCleanup(bill.delete)
 
-class PhoneTestCase(TestCase):
+        user = User.objects.create_user(username='phone-user')
+        self.addCleanup(user.delete)
+        plan = Plan.objects.create()
+        self.addCleanup(plan.delete)
+        phone = Phone.objects.create(number=1234567890, user=user, plan=plan)
+        self.addCleanup(phone.delete)
+        self.kwargs = dict(bill=bill, phone=phone)
+        super(ConsumptionTestCase, self).setUp()
+
+
+class PhoneTestCase(BaseModelTestCase):
     """The test suite for the Phone model."""
 
     model = Phone
 
+    def setUp(self):
+        user = User.objects.create_user(username='test')
+        self.addCleanup(user.delete)
+        plan = Plan.objects.create(included_minutes=123, included_sms=321)
+        self.addCleanup(plan.delete)
+        self.kwargs = dict(number=1234567890, user=user, plan=plan)
+        super(PhoneTestCase, self).setUp()
 
-class PlanTestCase(TestCase):
+
+class PlanTestCase(BaseModelTestCase):
     """The test suite for the Plan model."""
 
     model = Plan
+    kwargs = dict(included_minutes=123, included_sms=321)
 
 
-class FleetTestCase(TestCase):
+class FleetTestCase(BaseModelTestCase):
     """The test suite for the Fleet model."""
 
     model = Fleet
 
-
-class ParceInvoiceTestCase(TestCase):
-    """The test suite for the parse_invoice method."""
-
     def setUp(self):
-        super(ParceInvoiceTestCase, self).setUp()
-        patcher = patch('fleetcore.models.pdf2cell.parse_file')
-        self.mock_pdf_parser = patcher.start()
-        self.addCleanup(patcher.stop)
-
-        self.owner = User.objects.create(username='owner',
-                                         email='owner@example.com')
-
-        self.fleet = Fleet.objects.create(
-            owner=self.owner, account_number=123456,
-            email='foo@example.com', provider='Fake')
-
-    def test_empty_bill_is_parsed_when_created(self):
-        assert Consumption.objects.count() == 0
-
-        self.mock_pdf_parser.return_value = {}
-        bill = Bill.objects.create(
-            fleet=self.fleet,
-            invoice=File(open(__file__), "test_invoice.pdf"))
-
-        self.mock_pdf_parser.assert_called_once_with(bill.invoice.path)
-        self.assertEqual(Consumption.objects.count(), 0)
+        user = User.objects.create_user(username='fleet-owner')
+        self.addCleanup(user.delete)
+        self.kwargs = dict(owner=user, account_number=24680)
+        super(FleetTestCase, self).setUp()

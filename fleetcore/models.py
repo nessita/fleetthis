@@ -76,31 +76,6 @@ class Fleet(models.Model):
         return '%s - %s' % (self.provider, self.account_number)
 
 
-class Plan(models.Model):
-    name = models.CharField(max_length=100)
-    with_clearing = models.BooleanField()
-    price = MoneyField()
-    min_price = MoneyField()
-    sms_price = MoneyField()
-    included_minutes = models.PositiveIntegerField()
-    included_sms = models.PositiveIntegerField()
-    description = models.TextField(blank=True)
-
-    def __unicode__(self):
-        clearing = 'with' if self.with_clearing else 'no'
-        return '%s - $%s (%s clearing)' % (self.name, self.price, clearing)
-
-
-class Phone(models.Model):
-    number = models.PositiveIntegerField()
-    user = models.ForeignKey(User)
-    plan = models.ForeignKey(Plan)
-    notes = models.TextField(blank=True)
-
-    def __unicode__(self):
-        return '%s - %s' % (self.number, self.user.get_full_name())
-
-
 class Bill(models.Model):
     fleet = models.ForeignKey(Fleet)
     invoice = models.FileField(upload_to='invoices')
@@ -119,6 +94,31 @@ class Bill(models.Model):
 
     def __unicode__(self):
         return 'Bill %s (%s)' % (self.billing_date, self.fleet)
+
+
+class Plan(models.Model):
+    name = models.CharField(max_length=100)
+    with_clearing = models.BooleanField()
+    price = MoneyField()
+    min_price = MoneyField()
+    sms_price = MoneyField()
+    included_minutes = models.PositiveIntegerField(default=0)
+    included_sms = models.PositiveIntegerField(default=0)
+    description = models.TextField(blank=True)
+
+    def __unicode__(self):
+        clearing = 'with' if self.with_clearing else 'no'
+        return '%s - $%s (%s clearing)' % (self.name, self.price, clearing)
+
+
+class Phone(models.Model):
+    number = models.PositiveIntegerField()
+    user = models.ForeignKey(User)
+    plan = models.ForeignKey(Plan)
+    notes = models.TextField(blank=True)
+
+    def __unicode__(self):
+        return '%s - %s' % (self.number, self.user.get_full_name())
 
 
 class Consumption(models.Model):
@@ -217,11 +217,3 @@ def parse_invoice(bill):
         bill.billing_date = bill_date
     bill.provider_number = data.get('bill_number', '')
     bill.save()
-
-
-def process_bill(sender, instance, created, **kwargs):
-    if created:
-        parse_invoice(instance)
-
-
-post_save.connect(process_bill, sender=Bill)

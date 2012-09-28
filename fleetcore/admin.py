@@ -5,11 +5,13 @@ from __future__ import print_function
 
 from django import forms
 from django.conf.urls import patterns, url
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.auth.models import Group, User
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
+from django.utils.translation import ugettext_lazy as _
 
 from fleetusers.models import UserProfile
 from fleetcore.models import (
@@ -21,63 +23,32 @@ from fleetcore.models import (
 )
 
 
-class FleetCoreAdminSite(admin.AdminSite):
+class BillAdmin(admin.ModelAdmin):
 
     def get_urls(self):
-        urls = super(FleetCoreAdminSite, self).get_urls()
-        my_urls = patterns('',
-            (r'^my_view/$', self.admin_view(self.my_view))
+        urls = super(BillAdmin, self).get_urls()
+        my_urls = patterns(
+            '', url(r'^(\d+)/process-invoice/$',
+                    self.admin_site.admin_view(self.process_invoice),
+                    name='process-invoice')
         )
         return my_urls + urls
 
-    def my_view(self, request):
-        # custom view which should return an HttpResponse
-        print('WORKED')
-
-
-fleet_admin = FleetCoreAdminSite(name='fleetcore-admin')
-fleet_admin.register(Group, GroupAdmin)
-fleet_admin.register(User, UserAdmin)
-
-
-class UploadInvoiceForm(forms.Form):
-    subject = forms.CharField(max_length=100)
-    message = forms.CharField()
-    sender = forms.EmailField()
-    cc_myself = forms.BooleanField(required=False)
-
-
-class FleetAdmin(admin.ModelAdmin):
-
-    def get_urls(self):
-        urls = super(FleetAdmin, self).get_urls()
-        my_urls = patterns('',
-            url(r'^(\d+)/upload-invoice/$',
-                self.admin_site.admin_view(self.upload_invoice),
-                name='upload-invoice')
-        )
-        return my_urls + urls
-
-    def upload_invoice(self, request, fleet_id):
+    def process_invoice(self, request, bill_id):
         if not self.has_change_permission(request):
             raise PermissionDenied
-        fleet = get_object_or_404(self.queryset(request), pk=fleet_id)
-        if request.method == 'POST':
-            form = UploadInvoiceForm(request.POST)
-            if form.is_valid():
-                form.save()
-                msg = ugettext('Password changed successfully.')
-                messages.success(request, msg)
-                return HttpResponseRedirect('..')
+        bill = get_object_or_404(self.queryset(request), pk=bill_id)
+        if request.method == 'GET':
+            msg = _('Invoice processed successfully.')
+            messages.success(request, msg)
+            response = HttpResponseRedirect('..')
         else:
-            form = UploadInvoiceForm()
+            context = {}
+            response = TemplateResponse(request, [
+                'admin/fleetcore/bill/process_invoice.html'
+            ], context, current_app=self.admin_site.name)
 
-        context = {
-            'form': form,
-        }
-        return TemplateResponse(request, [
-            'admin/fleetcore/fleet/upload_invoice.html'
-        ], context, current_app=self.admin_site.name)
+        return response
 
 
 class ConsumptionAdmin(admin.ModelAdmin):
@@ -107,9 +78,9 @@ class ConsumptionAdmin(admin.ModelAdmin):
     )
 
 
-fleet_admin.register(Bill)
-fleet_admin.register(Consumption, ConsumptionAdmin)
-fleet_admin.register(Fleet, FleetAdmin)
-fleet_admin.register(Phone)
-fleet_admin.register(Plan)
-fleet_admin.register(UserProfile)
+admin.site.register(Bill, BillAdmin)
+admin.site.register(Consumption, ConsumptionAdmin)
+admin.site.register(Fleet)
+admin.site.register(Phone)
+admin.site.register(Plan)
+admin.site.register(UserProfile)
