@@ -28,16 +28,17 @@ class BillAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super(BillAdmin, self).get_urls()
         my_urls = patterns(
-            '', url(r'^(\d+)/process-invoice/$',
-                    self.admin_site.admin_view(self.process_invoice),
-                    name='process-invoice')
+            '',
+            url(r'^(\d+)/process-invoice/$',
+                self.admin_site.admin_view(self.process_invoice),
+                name='process-invoice'),
+            url(r'^(\d+)/notify-users/$',
+                self.admin_site.admin_view(self.notify_users),
+                name='notify_users-users'),
         )
         return my_urls + urls
 
     def process_invoice(self, request, bill_id):
-        if not self.has_change_permission(request):
-            raise PermissionDenied
-
         bill = get_object_or_404(self.queryset(request), pk=bill_id)
         try:
             bill.parse_invoice()
@@ -47,6 +48,21 @@ class BillAdmin(admin.ModelAdmin):
             messages.error(request, msg)
         else:
             msg = _('Invoice processed successfully.')
+            messages.success(request, msg)
+
+        response = HttpResponseRedirect('..')
+        return response
+
+    def notify_users(self, request, bill_id):
+        bill = get_object_or_404(self.queryset(request), pk=bill_id)
+        try:
+            bill.notify_users()
+        except Bill.NotifyError as e:
+            msg = _('Notification error.')
+            msg += ' Error: %s' % unicode(e)
+            messages.error(request, msg)
+        else:
+            msg = _('Notifications sent successfully.')
             messages.success(request, msg)
 
         response = HttpResponseRedirect('..')

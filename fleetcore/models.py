@@ -95,6 +95,9 @@ class Bill(models.Model):
     class ParseError(Exception):
         """The invoice could not be parsed."""
 
+    class NotifyError(Exception):
+        """The users could not be notified."""
+
     @property
     def taxes(self):
         return self.internal_tax + self.iva_tax + self.other_tax
@@ -110,23 +113,23 @@ class Bill(models.Model):
 
         """
         if self.parsing_date is not None:
-            raise self.ParseError('Invoice already parsed on %s.' %
+            raise Bill.ParseError('Invoice already parsed on %s.' %
                                   self.parsing_date)
 
         try:
             fname = self.invoice.path
         except ValueError:
-            raise self.ParseError('Invoice path can not be loaded.')
+            raise Bill.ParseError('Invoice path can not be loaded.')
 
         if not os.path.exists(fname):
-            raise self.ParseError('Invoice path does not exist.')
+            raise Bill.ParseError('Invoice path does not exist.')
 
         data = pdf2cell.parse_file(fname)
         for d in data.get('phone_data', []):
             try:
                 phone = Phone.objects.get(number=d[PHONE_NUMBER])
             except Phone.DoesNotExist:
-                raise self.ParseError('Phone %s does not exist.' %
+                raise Bill.ParseError('Phone %s does not exist.' %
                                       d[PHONE_NUMBER])
             kwargs = dict(
                 reported_user=d[USER],
@@ -155,6 +158,9 @@ class Bill(models.Model):
         self.parsing_date = datetime.now()
         self.provider_number = data.get('bill_number', '')
         self.save()
+
+    def notify_users(self):
+        """Notify users about this bill."""
 
 
 class Plan(models.Model):
