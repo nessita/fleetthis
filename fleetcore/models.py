@@ -3,11 +3,13 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
+import os
+
 from datetime import datetime
 from decimal import Decimal
 
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import models, transaction
 from django.db.models.signals import post_save
 
 from fleetcore import pdf2cell
@@ -79,7 +81,7 @@ class Fleet(models.Model):
 class Bill(models.Model):
     fleet = models.ForeignKey(Fleet)
     invoice = models.FileField(upload_to='invoices')
-    billing_date = models.DateField(default=datetime.today())  # billing date
+    billing_date = models.DateField(default=datetime.today())
     provider_number = models.CharField(max_length=50, blank=True)
     internal_tax = TaxField(default=Decimal('0.0417'))
     iva_tax = TaxField(default=Decimal('0.27'))
@@ -88,12 +90,70 @@ class Bill(models.Model):
     created = models.DateField(auto_now_add=True)
     last_modified = models.DateField(auto_now=True)
 
+    class ParseError(Exception):
+        """The invoice could not be parsed."""
+
     @property
     def taxes(self):
         return self.internal_tax + self.iva_tax + self.other_tax
 
     def __unicode__(self):
         return 'Bill %s (%s)' % (self.billing_date, self.fleet)
+
+    @transaction.commit_on_success
+    def parse_invoice(self):
+        """Parse this bill's invoice.
+
+        Return whether the parse was successful
+
+        """
+        try:
+            fname = self.invoice.path
+        except ValueError:
+            raise self.ParseError('Invoice path can not be loaded.')
+
+        if not os.path.exists(fname):
+            raise self.ParseError('Invoice path does not exist.')
+
+        data = pdf2cell.parse_file(fname)
+        consumptions = []  # ugly workaround since commit_on_success
+                           # seems not work outside a view
+        for d in data.get('phone_data', []):
+            try:
+                phone = Phone.objects.get(number=d[PHONE_NUMBER])
+            except Phone.DoesNotExist:
+                raise self.ParseError('Phone %s does not exist.',
+                                      d[PHONE_NUMBER])
+            kwargs = dict(
+                reported_user=d[USER],
+                reported_plan=d[PLAN],
+                monthly_price=d[MONTHLY_PRICE],
+                services=d[SERVICES],
+                refunds=d[REFUNDS],
+                included_min=d[INCLUDED_MIN],
+                exceeded_min=d[EXCEEDED_MIN],
+                exceeded_min_price=d[EXCEEDED_MIN_PRICE],
+                ndl_min=d[NDL_MIN],
+                ndl_min_price=d[NDL_PRICE],
+                idl_min=d[IDL_MIN],
+                idl_min_price=d[IDL_PRICE],
+                sms=d[SMS],
+                sms_price=d[SMS_PRICE],
+                equipment_price=d[EQUIPMENT_PRICE],
+                other_price=d[OTHER_PRICE],
+                reported_total=d[TOTAL_PRICE],
+            )
+            #Consumption.objects.create(phone=phone, bill=self, **kwargs)
+            consumptions.append(Consumption(phone=phone, bill=self, **kwargs))
+
+        for c in consumptions:
+            c.save()
+
+        bill_date = data.get('bill_date')
+        if bill_date:
+            self.billing_date = bill_date
+        self.provider_number = data.get('bill_number', '')
+        self.save()
 
 
 class Plan(models.Model):
@@ -180,40 +240,3 @@ class Consumption(models.Model):
         ordering = ('phone',)
         get_latest_by = 'bill__billing_date'
         unique_together = ('phone', 'bill')
-
-
-def parse_invoice(bill):
-    # parse invoice
-    fname = bill.invoice.path
-    data = pdf2cell.parse_file(fname)
-    for d in data.get('phone_data', []):
-        try:
-            phone = Phone.objects.get(number=d[PHONE_NUMBER])
-        except Phone.DoesNotExist:
-            continue
-        kwargs = dict(
-            reported_user=d[USER],
-            reported_plan=d[PLAN],
-            monthly_price=d[MONTHLY_PRICE],
-            services=d[SERVICES],
-            refunds=d[REFUNDS],
-            included_min=d[INCLUDED_MIN],
-            exceeded_min=d[EXCEEDED_MIN],
-            exceeded_min_price=d[EXCEEDED_MIN_PRICE],
-            ndl_min=d[NDL_MIN],
-            ndl_min_price=d[NDL_PRICE],
-            idl_min=d[IDL_MIN],
-            idl_min_price=d[IDL_PRICE],
-            sms=d[SMS],
-            sms_price=d[SMS_PRICE],
-            equipment_price=d[EQUIPMENT_PRICE],
-            other_price=d[OTHER_PRICE],
-            reported_total=d[TOTAL_PRICE],
-        )
-        Consumption.objects.create(phone=phone, bill=bill, **kwargs)
-
-    bill_date = data.get('bill_date')
-    if bill_date:
-        bill.billing_date = bill_date
-    bill.provider_number = data.get('bill_number', '')
-    bill.save()

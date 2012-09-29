@@ -6,9 +6,12 @@ from __future__ import print_function
 import logging
 import os
 
-from unittest import TestCase
+from datetime import datetime
+from decimal import Decimal
 
+from django.core.files import File
 from django.contrib.auth.models import User
+from django.test import TestCase
 from mock import patch
 
 from fleetcore.models import (
@@ -18,6 +21,26 @@ from fleetcore.models import (
     Phone,
     Plan,
 )
+
+TEST_FILES_DIR = os.path.join(os.path.dirname(__file__), 'files')
+PDF_PARSED_SAMPLE = {
+    'bill_date': datetime(2011, 10, 13),
+    'bill_number': '123456abcd',
+    'phone_data': [
+        [1234567890, 'Foo, Bar', 'PLAN1',
+         Decimal('35.0'), Decimal('45.0'), Decimal('0.0'),
+         Decimal('103.0'), Decimal('0.0'), Decimal('0.0'),
+         Decimal('0.0'), Decimal('0.0'), Decimal('0.0'),
+         Decimal('0.0'), Decimal('45.0'), Decimal('10.80'),
+         Decimal('0.0'), Decimal('0.0'), Decimal('90.80')],
+        [1987654320, 'Skywalker, Luke', 'PLAN2',
+         Decimal('35.0'), Decimal('0.0'), Decimal('0.0'),
+         Decimal('190.0'), Decimal('0.0'), Decimal('0.0'),
+         Decimal('0.0'), Decimal('0.0'), Decimal('0.0'),
+         Decimal('0.0'), Decimal('19.0'), Decimal('0.0'),
+         Decimal('0.0'), Decimal('0.0'), Decimal('35.0')],
+    ],
+}
 
 
 class BaseModelTestCase(TestCase):
@@ -52,6 +75,81 @@ class BillTestCase(BaseModelTestCase):
         self.addCleanup(fleet.delete)
         self.kwargs = dict(fleet=fleet, invoice='zaraza.pdf')
         super(BillTestCase, self).setUp()
+
+        patcher = patch('fleetcore.models.pdf2cell.parse_file')
+        self.mock_pdf_parser = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_empty_path(self):
+        assert Consumption.objects.count() == 0
+        self.obj.invoice = File('')
+        self.obj.save()
+
+        self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
+        self.assertFalse(self.mock_pdf_parser.called)
+        self.assertEqual(Consumption.objects.count(), 0)
+
+    def test_unexistent_path(self):
+        assert Consumption.objects.count() == 0
+        assert not os.path.exists(self.obj.invoice.path)
+
+        self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
+        self.assertFalse(self.mock_pdf_parser.called)
+        self.assertEqual(Consumption.objects.count(), 0)
+
+    def test_non_empty_bill_is_parsed(self):
+        assert Consumption.objects.count() == 0
+
+        path = os.path.join(TEST_FILES_DIR, 'empty.pdf')
+        assert not os.path.exists(path)
+        with open(path, 'w') as f:
+            self.addCleanup(os.remove, path)
+
+        self.obj.invoice = File(path)
+        self.obj.save()
+
+        self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
+        self.assertFalse(self.mock_pdf_parser.called)
+        self.assertEqual(Consumption.objects.count(), 0)
+
+    def test_missing_phones(self):
+        assert Consumption.objects.count() == 0
+
+        path = self.obj.invoice.path
+        with open(path, 'w') as f:
+            self.addCleanup(os.remove, path)
+        assert os.path.exists(self.obj.invoice.path)
+
+        self.mock_pdf_parser.return_value = PDF_PARSED_SAMPLE
+
+        # phones are not previously added, so parse is not successful
+        self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
+        self.mock_pdf_parser.assert_called_once_with(self.obj.invoice.path)
+        self.assertEqual(Consumption.objects.count(), 0)
+
+    def test_missing_one_phone(self):
+        self.test_missing_phones()
+
+        plan = Plan.objects.create(name='PLAN1')
+        user = User.objects.create(username='1234567890')
+        Phone.objects.create(number='1234567890', plan=plan, user=user)
+
+        # only one phone is in the system, so parse is not successful
+        self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
+        self.mock_pdf_parser.assert_called_with(self.obj.invoice.path)
+        self.assertEqual(Consumption.objects.count(), 0)
+
+    def test_no_phone_missing(self):
+        self.test_missing_one_phone()
+        plan = Plan.objects.create(name='PLAN2')
+        user = User.objects.create(username='1987654320')
+        Phone.objects.create(number='1987654320', plan=plan, user=user)
+
+        # both phones are in the system, so parse should succeed
+        self.obj.parse_invoice()
+
+        self.mock_pdf_parser.assert_called_with(self.obj.invoice.path)
+        self.assertEqual(Consumption.objects.count(), 2)
 
 
 class ConsumptionTestCase(BaseModelTestCase):
