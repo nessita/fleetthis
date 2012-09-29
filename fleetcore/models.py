@@ -81,7 +81,9 @@ class Fleet(models.Model):
 class Bill(models.Model):
     fleet = models.ForeignKey(Fleet)
     invoice = models.FileField(upload_to='invoices')
-    billing_date = models.DateField(default=datetime.today())
+    billing_date = models.DateField(null=True, blank=True)
+    parsing_date = models.DateTimeField(null=True, blank=True)
+    upload_date = models.DateTimeField(default=datetime.now)
     provider_number = models.CharField(max_length=50, blank=True)
     internal_tax = TaxField(default=Decimal('0.0417'))
     iva_tax = TaxField(default=Decimal('0.27'))
@@ -98,7 +100,7 @@ class Bill(models.Model):
         return self.internal_tax + self.iva_tax + self.other_tax
 
     def __unicode__(self):
-        return 'Bill %s (%s)' % (self.billing_date, self.fleet)
+        return 'Bill for "%s" (date: %s)' % ( self.fleet, self.billing_date)
 
     @transaction.commit_on_success
     def parse_invoice(self):
@@ -107,6 +109,10 @@ class Bill(models.Model):
         Return whether the parse was successful
 
         """
+        if self.parsing_date is not None:
+            raise self.ParseError('Invoice already parsed on %s.' %
+                                  self.parsing_date)
+
         try:
             fname = self.invoice.path
         except ValueError:
@@ -116,13 +122,11 @@ class Bill(models.Model):
             raise self.ParseError('Invoice path does not exist.')
 
         data = pdf2cell.parse_file(fname)
-        consumptions = []  # ugly workaround since commit_on_success
-                           # seems not work outside a view
         for d in data.get('phone_data', []):
             try:
                 phone = Phone.objects.get(number=d[PHONE_NUMBER])
             except Phone.DoesNotExist:
-                raise self.ParseError('Phone %s does not exist.',
+                raise self.ParseError('Phone %s does not exist.' %
                                       d[PHONE_NUMBER])
             kwargs = dict(
                 reported_user=d[USER],
@@ -143,15 +147,12 @@ class Bill(models.Model):
                 other_price=d[OTHER_PRICE],
                 reported_total=d[TOTAL_PRICE],
             )
-            #Consumption.objects.create(phone=phone, bill=self, **kwargs)
-            consumptions.append(Consumption(phone=phone, bill=self, **kwargs))
-
-        for c in consumptions:
-            c.save()
+            Consumption.objects.create(phone=phone, bill=self, **kwargs)
 
         bill_date = data.get('bill_date')
         if bill_date:
             self.billing_date = bill_date
+        self.parsing_date = datetime.now()
         self.provider_number = data.get('bill_number', '')
         self.save()
 
@@ -176,9 +177,15 @@ class Phone(models.Model):
     user = models.ForeignKey(User)
     plan = models.ForeignKey(Plan)
     notes = models.TextField(blank=True)
+    active_since = models.DateTimeField(default=datetime.today)
+    active_to = models.DateTimeField(null=True, blank=True)
 
     def __unicode__(self):
         return '%s - %s' % (self.number, self.user.get_full_name())
+
+    @property
+    def active(self):
+        return self.active_to is None or self.active_to > datetime.now()
 
 
 class Consumption(models.Model):
@@ -214,9 +221,9 @@ class Consumption(models.Model):
     payed = models.BooleanField()
 
     def __unicode__(self):
-        return '%s - Factura del %s - %s' % (self.bill.fleet.provider,
-                                             self.bill.billing_date,
-                                             self.phone)
+        return '%s - Bill from %s - %s' % (self.bill.fleet.provider,
+                                           self.bill.billing_date,
+                                           self.phone)
 
     def save(self, *args, **kwargs):
         total = self.reported_total

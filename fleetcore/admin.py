@@ -37,17 +37,19 @@ class BillAdmin(admin.ModelAdmin):
     def process_invoice(self, request, bill_id):
         if not self.has_change_permission(request):
             raise PermissionDenied
+
         bill = get_object_or_404(self.queryset(request), pk=bill_id)
-        if request.method == 'GET':
+        try:
+            bill.parse_invoice()
+        except Bill.ParseError as e:
+            msg = _('Invoice processed unsuccessfully.')
+            msg += ' Error: %s' % unicode(e)
+            messages.error(request, msg)
+        else:
             msg = _('Invoice processed successfully.')
             messages.success(request, msg)
-            response = HttpResponseRedirect('..')
-        else:
-            context = {}
-            response = TemplateResponse(request, [
-                'admin/fleetcore/bill/process_invoice.html'
-            ], context, current_app=self.admin_site.name)
 
+        response = HttpResponseRedirect('..')
         return response
 
 
@@ -64,7 +66,7 @@ class ConsumptionAdmin(admin.ModelAdmin):
             'fields': ('total_before_taxes', 'taxes', 'total_before_round',
                        ('total', 'payed'),)
         }),
-        ('Factura', {
+        ('Data from provider', {
             'classes': ('collapse',),
             'fields': (
                 'reported_user', 'reported_plan', 'monthly_price',
