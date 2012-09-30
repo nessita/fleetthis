@@ -8,6 +8,7 @@ from django.conf.urls import patterns, url
 from django.contrib import admin, messages
 from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.auth.models import Group, User
+from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
@@ -29,29 +30,40 @@ class BillAdmin(admin.ModelAdmin):
         urls = super(BillAdmin, self).get_urls()
         my_urls = patterns(
             '',
-            url(r'^(\d+)/process-invoice/$',
+            url(r'^(?P<bill_id>\d+)/process-invoice/$',
                 self.admin_site.admin_view(self.process_invoice),
                 name='process-invoice'),
-            url(r'^(\d+)/notify-users/$',
+            url(r'^(?P<bill_id>\d+)/show-details/$',
+                self.admin_site.admin_view(self.show_details),
+                name='show-details'),
+            url(r'^(?P<bill_id>\d+)/notify-users/$',
                 self.admin_site.admin_view(self.notify_users),
-                name='notify_users-users'),
+                name='notify-users'),
         )
         return my_urls + urls
 
     def process_invoice(self, request, bill_id):
         bill = get_object_or_404(self.queryset(request), pk=bill_id)
+        error_msg = _('Invoice processed unsuccessfully. Error: ')
+
         try:
             bill.parse_invoice()
         except Bill.ParseError as e:
-            msg = _('Invoice processed unsuccessfully.')
-            msg += ' Error: %s' % unicode(e)
-            messages.error(request, msg)
-        else:
-            msg = _('Invoice processed successfully.')
-            messages.success(request, msg)
+            messages.error(request, error_msg + unicode(e))
+            return HttpResponseRedirect('..')
 
-        response = HttpResponseRedirect('..')
-        return response
+        try:
+            bill.make_adjustments()
+        except Bill.AdjustmentError as e:
+            messages.error(request, error_msg + unicode(e))
+            return HttpResponseRedirect('..')
+
+        msg = _('Invoice processed successfully.')
+        messages.success(request, msg)
+        return HttpResponseRedirect(reverse('show_details', arg=bill_id))
+
+    def show_details(self, request, bill_id):
+        return TemplateResponse(request, 'admin/bill/show_details.html')
 
     def notify_users(self, request, bill_id):
         bill = get_object_or_404(self.queryset(request), pk=bill_id)

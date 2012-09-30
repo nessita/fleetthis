@@ -13,7 +13,7 @@ from fleetcore.models import Fleet, Plan, Phone
 
 PLANS = (
     # ('XMD01', 2200, True), ('INTRC', 9507, False),
-    ('TCM07', Decimal('35.00'), True, 130,
+    ('TCM07', Decimal('35.00'), 130,
      Decimal('0.22'), 100, Decimal('0.07'),
      """DETALLE PLAN DE PRECIO: PLAN TCM07 - Abono: $ 35.00 Pesos
 Libres en el Plan:$ 35.00
@@ -25,7 +25,7 @@ Los SMS hacen clearing con el resto de las líneas en el mismo plan,
 y cada línea aporta 100 SMS a la bolsa. Los SMS dentro de la bolsa de mensajes
 salen $ 0.07, y por afuera cada uno sale $ 0.10.
 """),
-    ('TSC16', Decimal('35.00'), False, 130, Decimal('0.27'), 0,
+    ('TSC16', Decimal('35.00'), 130, Decimal('0.27'), 0,
      Decimal('0.24'),
      """DETALLE PLAN DE PRECIO: PLAN TSC16 - Abono: $ 35.00 Pesos
 Libres en el Plan: $35.00
@@ -35,7 +35,7 @@ Min. destino a móviles del cliente: $ 0.00 $ 0.00
 Min. destino a móviles: $0.27 $ 0.27
 Los SMS no están incluídos en el abono, cada uno sale $ 0.24.
 """),
-    ('TCL16', Decimal('35.00'), True, 130, Decimal('0.27'), 0, Decimal('0.24'),
+    ('TCL16', Decimal('35.00'), 130, Decimal('0.27'), 0, Decimal('0.24'),
      """DETALLE PLAN DE PRECIO: PLAN TCL16 - Abono: $ 35.00 Pesos
 Libres en el Plan:$ 35.00
 Precios sin imp ni cargo ENARD Ley 26573
@@ -103,7 +103,7 @@ class Command(BaseCommand):
         plans = {}
         for i, j, k, mins, min_price, sms, sms_price, desc in PLANS:
             plans[i] = Plan.objects.create(
-                name=i, price=j, with_clearing=k, included_minutes=mins,
+                name=i, price=j, included_minutes=mins,
                 min_price=min_price, included_sms=sms, sms_price=sms_price,
                 description=desc,
             )

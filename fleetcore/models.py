@@ -68,6 +68,14 @@ class MinuteField(models.DecimalField):
         super(MinuteField, self).__init__(*args, **default)
 
 
+class SMSField(models.PositiveIntegerField):
+
+    def __init__(self, *args, **kwargs):
+        default = dict(default=0)
+        default.update(kwargs)
+        super(SMSField, self).__init__(*args, **default)
+
+
 class Fleet(models.Model):
     owner = models.ForeignKey(User)
     account_number = models.PositiveIntegerField()
@@ -89,11 +97,16 @@ class Bill(models.Model):
     iva_tax = TaxField(default=Decimal('0.27'))
     other_tax = TaxField(default=Decimal('0.01'))
 
+    min_penalty = MinuteField('Mínimo consumo de minutos')
+    sms_penalty = SMSField('Mínimo consumo de mensajes')
     created = models.DateField(auto_now_add=True)
     last_modified = models.DateField(auto_now=True)
 
     class ParseError(Exception):
         """The invoice could not be parsed."""
+
+    class AdjustmentError(Exception):
+        """The invoice could not be adjusted."""
 
     class NotifyError(Exception):
         """The users could not be notified."""
@@ -103,7 +116,7 @@ class Bill(models.Model):
         return self.internal_tax + self.iva_tax + self.other_tax
 
     def __unicode__(self):
-        return 'Bill for "%s" (date: %s)' % ( self.fleet, self.billing_date)
+        return 'Bill for "%s" (date: %s)' % (self.fleet, self.billing_date)
 
     @transaction.commit_on_success
     def parse_invoice(self):
@@ -159,23 +172,37 @@ class Bill(models.Model):
         self.provider_number = data.get('bill_number', '')
         self.save()
 
+    def make_adjustments(self):
+        """Make all the required adjustment to Consumptions."""
+        if self.parsing_date is None:
+            raise Bill.AdjustmentError('Bill must be parsed before making '
+                                       'adjustments.')
+
+        for c in self.consumption_set.all():
+            print(c)
+
     def notify_users(self):
         """Notify users about this bill."""
 
 
 class Plan(models.Model):
     name = models.CharField(max_length=100)
-    with_clearing = models.BooleanField()
     price = MoneyField()
     min_price = MoneyField()
     sms_price = MoneyField()
     included_minutes = models.PositiveIntegerField(default=0)
     included_sms = models.PositiveIntegerField(default=0)
+    with_min_clearing = models.BooleanField(default=True)
+    with_sms_clearing = models.BooleanField(default=False)
     description = models.TextField(blank=True)
 
     def __unicode__(self):
-        clearing = 'with' if self.with_clearing else 'no'
-        return '%s - $%s (%s clearing)' % (self.name, self.price, clearing)
+        min_clearing = ('with' if self.with_min_clearing else 'no' +
+                        'clearing for minutes')
+        sms_clearing = ('with' if self.with_sms_clearing else 'no' +
+                        'clearing for sms')
+        return '%s - $%s (%s, %s)' % (self.name, self.price,
+                                      min_clearing, sms_clearing)
 
 
 class Phone(models.Model):
@@ -187,7 +214,10 @@ class Phone(models.Model):
     active_to = models.DateTimeField(null=True, blank=True)
 
     def __unicode__(self):
-        return '%s - %s' % (self.number, self.user.get_full_name())
+        result = unicode(self.number)
+        if self.user.get_full_name():
+            result += ' - %s' % self.user.get_full_name()
+        return result
 
     @property
     def active(self):
@@ -211,13 +241,15 @@ class Consumption(models.Model):
     ndl_min_price = MoneyField('Discado nacional ($)')
     idl_min = MinuteField('Discado internacional (minutos)')
     idl_min_price = MoneyField('Discado internacional ($)')
-    sms = models.PositiveIntegerField('Mensajes consumidos', default=0)
+    sms = SMSField('Mensajes consumidos')
     sms_price = MoneyField('Mensajes consumidos ($)')
     equipment_price = MoneyField('Equipos ($)')
     other_price = MoneyField('Varios ($)')
     reported_total = MoneyField('Total ($)')
 
     # calculated *and* stored in the DB
+    min_penalty = MinuteField('Multa de minutos')
+    sms_penalty = SMSField('Multa de mensajes')
     total_before_taxes = MoneyField()
     taxes = TaxField()
     total_before_round = MoneyField()
@@ -227,14 +259,14 @@ class Consumption(models.Model):
     payed = models.BooleanField()
 
     def __unicode__(self):
-        return '%s - Bill from %s - %s' % (self.bill.fleet.provider,
-                                           self.bill.billing_date,
-                                           self.phone)
+        return '%s - Bill from %s - Phone %s' % (self.bill.fleet.provider,
+                                                 self.bill.billing_date,
+                                                 self.phone)
 
     def save(self, *args, **kwargs):
         total = self.reported_total
         plan = self.phone.plan
-        if plan.with_clearing:
+        if plan.with_min_clearing:
             total -= self.monthly_price
             total += plan.included_minutes * plan.min_price
         else:

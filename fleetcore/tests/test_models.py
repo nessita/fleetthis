@@ -41,6 +41,7 @@ from fleetcore.pdf2cell import (
     TOTAL_PRICE,
     USER,
 )
+from fleetcore.tests.factory import Factory
 
 TEST_FILES_DIR = os.path.join(os.path.dirname(__file__), 'files')
 PDF_PARSED_SAMPLE = {
@@ -71,10 +72,12 @@ class BaseModelTestCase(TransactionTestCase):
 
     def setUp(self):
         super(BaseModelTestCase, self).setUp()
+        self.factory = Factory()
         self.obj = None
         if self.model is not None:
-            self.obj = self.model.objects.create(**self.kwargs)
-            self.addCleanup(self.obj.delete)
+            maker = getattr(self.factory,
+                            'make_%s' % self.model.__name__.lower())
+            self.obj = maker(**self.kwargs)
 
     def test_id(self):
         """Model can be created and stored."""
@@ -89,16 +92,15 @@ class BillTestCase(BaseModelTestCase):
     model = Bill
 
     def setUp(self):
-        user = User.objects.create_user(username='fleet-owner')
-        self.addCleanup(user.delete)
-        fleet = Fleet.objects.create(owner=user, account_number=24680)
-        self.addCleanup(fleet.delete)
-        self.kwargs = dict(fleet=fleet, invoice='zaraza.pdf')
         super(BillTestCase, self).setUp()
 
         patcher = patch('fleetcore.models.pdf2cell.parse_file')
         self.mock_pdf_parser = patcher.start()
         self.addCleanup(patcher.stop)
+
+
+class ParseInvoiceTestCase(BillTestCase):
+    """The test suite for the parse_invoice method for the Bill model."""
 
     def assert_no_data_processed(self, pdf_parser_called=False):
         if pdf_parser_called:
@@ -214,41 +216,47 @@ class BillTestCase(BaseModelTestCase):
         self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
 
 
+class MakeAdjustmentsTestCase(BillTestCase):
+    """The test suite for the make_adjustments method for the Bill model."""
+
+    def setUp(self):
+        super(MakeAdjustmentsTestCase, self).setUp()
+        Phone.objects.create(
+            number='1234567890',
+            plan=Plan.objects.create(name='PLAN1'),
+            user=User.objects.create(username='1234567890'))
+        Phone.objects.create(
+            number='1987654320',
+            plan=Plan.objects.create(name='PLAN2'),
+            user=User.objects.create(username='1987654320'))
+
+        with open(self.obj.invoice.path, 'w') as f:
+            self.addCleanup(os.remove, self.obj.invoice.path)
+
+        self.mock_pdf_parser.return_value = PDF_PARSED_SAMPLE
+        self.obj.parse_invoice()
+        assert self.obj.parsing_date is not None
+
+    def test_no_parsing_date(self):
+        self.obj.parsing_date = None
+        self.obj.save()
+
+        self.assertRaises(Bill.AdjustmentError, self.obj.make_adjustments)
+
+    def test_parsed_but_no_data(self):
+        self.obj.make_adjustments()
+
+
 class ConsumptionTestCase(BaseModelTestCase):
     """The test suite for the Consumption model."""
 
     model = Consumption
-
-    def setUp(self):
-        user = User.objects.create_user(username='fleet-owner')
-        self.addCleanup(user.delete)
-        fleet = Fleet.objects.create(owner=user, account_number=24680)
-        self.addCleanup(fleet.delete)
-        bill = Bill.objects.create(fleet=fleet, invoice='yadda.pdf')
-        self.addCleanup(bill.delete)
-
-        user = User.objects.create_user(username='phone-user')
-        self.addCleanup(user.delete)
-        plan = Plan.objects.create()
-        self.addCleanup(plan.delete)
-        phone = Phone.objects.create(number=1234567890, user=user, plan=plan)
-        self.addCleanup(phone.delete)
-        self.kwargs = dict(bill=bill, phone=phone)
-        super(ConsumptionTestCase, self).setUp()
 
 
 class PhoneTestCase(BaseModelTestCase):
     """The test suite for the Phone model."""
 
     model = Phone
-
-    def setUp(self):
-        user = User.objects.create_user(username='test')
-        self.addCleanup(user.delete)
-        plan = Plan.objects.create(included_minutes=123, included_sms=321)
-        self.addCleanup(plan.delete)
-        self.kwargs = dict(number=1234567890, user=user, plan=plan)
-        super(PhoneTestCase, self).setUp()
 
     def test_active(self):
         self.assertTrue(self.obj.active)
@@ -276,16 +284,9 @@ class PlanTestCase(BaseModelTestCase):
     """The test suite for the Plan model."""
 
     model = Plan
-    kwargs = dict(included_minutes=123, included_sms=321)
 
 
 class FleetTestCase(BaseModelTestCase):
     """The test suite for the Fleet model."""
 
     model = Fleet
-
-    def setUp(self):
-        user = User.objects.create_user(username='fleet-owner')
-        self.addCleanup(user.delete)
-        self.kwargs = dict(owner=user, account_number=24680)
-        super(FleetTestCase, self).setUp()
