@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="">
+        <meta name="author" content="">
+        <title>{% block html-title %}fleetthis{% endblock %}</title>
+
+        <link rel="stylesheet" href="{{ STATIC_URL }}bootstrap/css/bootstrap.css" />
+
+        <style>
+            body {
+                padding-top: 60px; /* make the container go to the bottom of the topbar */
+            }
+        </style>
+
+        <link href="{{ STATIC_URL }}bootstrap/css/bootstrap-responsive.css" rel="stylesheet">
+        {% block extra-head %}
+        {% endblock %}
+
+    </head>
+
+    <body>
+        <div class="navbar navbar-inverse navbar-fixed-top">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="brand" href="/">Fleetthis</a>
+                    <div>
+                        <ul class="nav">
+                            {% block navbar-left-menu %}{% endblock %}
+                        </ul>
+                        <ul class="nav pull-right">
+                            {% block navbar-right-menu %}{% endblock %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container-fluid">
+            <div class="row-fluid">
+                <div class="span2">
+                    {% block sidebar %}
+                    {% endblock %}
+                </div>
+                <div class="span10">
+                    {% block content %}
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+
+    </body>
+</html>
