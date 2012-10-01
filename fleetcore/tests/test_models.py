@@ -248,6 +248,9 @@ class MakeAdjustmentsTestCase(BillTestCase):
                 phone=phone, bill=self.obj,
             )
 
+        self.plan2.included_minutes = 333
+        self.plan2.save()
+
         with open(self.obj.invoice.path, 'w') as f:
             self.addCleanup(os.remove, self.obj.invoice.path)
         self.mock_pdf_parser.return_value = {}
