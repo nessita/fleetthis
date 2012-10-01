@@ -196,10 +196,10 @@ class Plan(models.Model):
     with_sms_clearing = models.BooleanField(default=False)
 
     def __unicode__(self):
-        min_clearing = ('with' if self.with_min_clearing else 'no' +
-                        'clearing for minutes')
-        sms_clearing = ('with' if self.with_sms_clearing else 'no' +
-                        'clearing for sms')
+        min_clearing = (('with' if self.with_min_clearing else 'no') +
+                        ' clearing for minutes')
+        sms_clearing = (('with' if self.with_sms_clearing else 'no') +
+                        ' clearing for sms')
         return '%s - $%s (%s, %s)' % (self.name, self.price,
                                       min_clearing, sms_clearing)
 

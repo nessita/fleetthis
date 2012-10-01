@@ -18,6 +18,7 @@ from fleetcore.models import (
     Bill,
     Consumption,
     Fleet,
+    Penalty,
     Phone,
     Plan,
 )
@@ -258,13 +259,11 @@ class MakeAdjustmentsTestCase(BillTestCase):
         self.obj.save()
 
         self.assertRaises(Bill.AdjustmentError, self.obj.make_adjustments)
-        self.assertEqual(self.obj.min_penalty, 0)
-        self.assertEqual(self.obj.sms_penalty, 0)
+        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
 
     def test_parsed_but_no_data(self):
         self.obj.make_adjustments()
-        self.assertEqual(self.obj.min_penalty, 0)
-        self.assertEqual(self.obj.sms_penalty, 0)
+        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
 
     def test_parsed_with_data_no_min_clearing_less_minutes(self):
         self.plan1.with_min_clearing = False
@@ -277,8 +276,7 @@ class MakeAdjustmentsTestCase(BillTestCase):
 
         self.obj.make_adjustments()
 
-        self.assertEqual(self.obj.min_penalty, 0)
-        self.assertEqual(self.obj.sms_penalty, 0)
+        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
 
         for c in Consumption.objects.all():
             self.assertEqual(c.min_penalty, 0)
@@ -296,8 +294,7 @@ class MakeAdjustmentsTestCase(BillTestCase):
 
         self.obj.make_adjustments()
 
-        self.assertEqual(self.obj.min_penalty, 0)
-        self.assertEqual(self.obj.sms_penalty, 0)
+        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
 
         for c in Consumption.objects.all():
             self.assertEqual(c.min_penalty, 0)
@@ -313,6 +310,7 @@ class MakeAdjustmentsTestCase(BillTestCase):
             c.save()
 
         self.obj.make_adjustments()
+        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
 
     def test_parsed_with_data_with_min_clearing_minutes_left(self):
         self.plan1.with_min_clearing = False
@@ -335,8 +333,10 @@ class MakeAdjustmentsTestCase(BillTestCase):
 
         self.obj.make_adjustments()
 
-        self.assertEqual(self.obj.min_penalty, 50)
-        self.assertEqual(self.obj.sms_penalty, 0)
+        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 1)
+        penalty = Penalty.objects.get()
+        self.assertEqual(penalty.minutes, 50)
+        self.assertEqual(penalty.sms, 0)
 
         for c in Consumption.objects.all():
             self.assertEqual(c.min_penalty, 0)
@@ -386,3 +386,9 @@ class FleetTestCase(BaseModelTestCase):
     """The test suite for the Fleet model."""
 
     model = Fleet
+
+
+class PenaltyTestCase(BaseModelTestCase):
+    """The test suite for the Penalty model."""
+
+    model = Penalty

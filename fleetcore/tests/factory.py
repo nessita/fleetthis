@@ -16,6 +16,7 @@ from fleetcore.models import (
     Bill,
     Consumption,
     Fleet,
+    Penalty,
     Phone,
     Plan,
 )
@@ -71,3 +72,7 @@ class Factory(object):
     def make_consumption(self, **kwargs):
         default = dict(bill=self.make_bill(), phone=self.make_phone())
         return self.make_something(Consumption, default, **kwargs)
+
+    def make_penalty(self, **kwargs):
+        default = dict(bill=self.make_bill(), plan=self.make_plan())
+        return self.make_something(Penalty, default, **kwargs)
