@@ -77,7 +77,7 @@ class SMSField(models.PositiveIntegerField):
 
 
 class Fleet(models.Model):
-    owner = models.ForeignKey(User)
+    user = models.ForeignKey(User)
     account_number = models.PositiveIntegerField()
     email = models.EmailField()
     provider = models.CharField(max_length=100)
@@ -97,8 +97,6 @@ class Bill(models.Model):
     iva_tax = TaxField(default=Decimal('0.27'))
     other_tax = TaxField(default=Decimal('0.01'))
 
-    min_penalty = MinuteField('Mínimo consumo de minutos')
-    sms_penalty = SMSField('Mínimo consumo de mensajes')
     created = models.DateField(auto_now_add=True)
     last_modified = models.DateField(auto_now=True)
 
@@ -178,8 +176,8 @@ class Bill(models.Model):
             raise Bill.AdjustmentError('Bill must be parsed before making '
                                        'adjustments.')
 
-        for c in self.consumption_set.all():
-            print(c)
+        #for c in self.consumption_set.all():
+        #    print(c)
 
     def notify_users(self):
         """Notify users about this bill."""
@@ -192,9 +190,10 @@ class Plan(models.Model):
     sms_price = MoneyField()
     included_minutes = models.PositiveIntegerField(default=0)
     included_sms = models.PositiveIntegerField(default=0)
-    with_min_clearing = models.BooleanField(default=True)
-    with_sms_clearing = models.BooleanField(default=False)
     description = models.TextField(blank=True)
+    with_min_clearing = models.BooleanField(default=True)
+    # SMS clearing: unused and untested -- for completeness sake
+    with_sms_clearing = models.BooleanField(default=False)
 
     def __unicode__(self):
         min_clearing = ('with' if self.with_min_clearing else 'no' +
@@ -285,3 +284,11 @@ class Consumption(models.Model):
         ordering = ('phone',)
         get_latest_by = 'bill__billing_date'
         unique_together = ('phone', 'bill')
+
+
+class Penalty(models.Model):
+
+    bill = models.ForeignKey(Bill)
+    plan = models.ForeignKey(Plan)
+    minutes = MinuteField()
+    sms = SMSField()

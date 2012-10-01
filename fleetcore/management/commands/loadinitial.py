@@ -96,12 +96,12 @@ class Command(BaseCommand):
             username='admin', email=admin_email, password=admin_pwd)
 
         the_fleet = Fleet.objects.create(
-            owner=admin, account_number=725615496,
+            user=admin, account_number=725615496,
             email='fleetthis@gmail.com', provider='Claro',
         )
 
         plans = {}
-        for i, j, k, mins, min_price, sms, sms_price, desc in PLANS:
+        for i, j, mins, min_price, sms, sms_price, desc in PLANS:
             plans[i] = Plan.objects.create(
                 name=i, price=j, included_minutes=mins,
                 min_price=min_price, included_sms=sms, sms_price=sms_price,

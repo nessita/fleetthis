@@ -48,11 +48,17 @@ PDF_PARSED_SAMPLE = {
     'bill_date': datetime(2011, 10, 13),
     'bill_number': '123456abcd',
     'phone_data': [
+        # PHONE_NUMBER, USER, PLAN,
         [1234567890, 'Foo, Bar', 'PLAN1',
+         # MONTHLY_PRICE, SERVICES, REFUNDS,
          Decimal('35.0'), Decimal('45.0'), Decimal('0.0'),
+         # INCLUDED_MIN, EXCEEDED_MIN, EXCEEDED_MIN_PRICE,
          Decimal('103.0'), Decimal('0.0'), Decimal('0.0'),
+         # NDL_MIN, NDL_PRICE, IDL_MIN,
          Decimal('0.0'), Decimal('0.0'), Decimal('0.0'),
+         # IDL_PRICE, SMS, SMS_PRICE,
          Decimal('0.0'), Decimal('45.0'), Decimal('10.80'),
+         # EQUIPMENT_PRICE, OTHER_PRICE, TOTAL_PRICE
          Decimal('0.0'), Decimal('0.0'), Decimal('90.80')],
         [1987654320, 'Skywalker, Luke', 'PLAN2',
          Decimal('35.0'), Decimal('0.0'), Decimal('0.0'),
@@ -221,19 +227,29 @@ class MakeAdjustmentsTestCase(BillTestCase):
 
     def setUp(self):
         super(MakeAdjustmentsTestCase, self).setUp()
-        Phone.objects.create(
-            number='1234567890',
-            plan=Plan.objects.create(name='PLAN1'),
-            user=User.objects.create(username='1234567890'))
-        Phone.objects.create(
-            number='1987654320',
-            plan=Plan.objects.create(name='PLAN2'),
-            user=User.objects.create(username='1987654320'))
+
+        data = (
+            ('PLAN1', 1234567890),
+            ('PLAN1', 1234560987),
+            ('PLAN1', 1265437890),
+            ('PLAN2', 1987654320),
+        )
+        for p, i in data:
+            plan, created = Plan.objects.get_or_create(name=p)
+            if created:
+                setattr(self, p.lower(), plan)
+
+            phone = Phone.objects.create(
+                number=i, plan=plan,
+                user=User.objects.create(username=str(i)),
+            )
+            Consumption.objects.create(
+                phone=phone, bill=self.obj,
+            )
 
         with open(self.obj.invoice.path, 'w') as f:
             self.addCleanup(os.remove, self.obj.invoice.path)
-
-        self.mock_pdf_parser.return_value = PDF_PARSED_SAMPLE
+        self.mock_pdf_parser.return_value = {}
         self.obj.parse_invoice()
         assert self.obj.parsing_date is not None
 
@@ -242,9 +258,89 @@ class MakeAdjustmentsTestCase(BillTestCase):
         self.obj.save()
 
         self.assertRaises(Bill.AdjustmentError, self.obj.make_adjustments)
+        self.assertEqual(self.obj.min_penalty, 0)
+        self.assertEqual(self.obj.sms_penalty, 0)
 
     def test_parsed_but_no_data(self):
         self.obj.make_adjustments()
+        self.assertEqual(self.obj.min_penalty, 0)
+        self.assertEqual(self.obj.sms_penalty, 0)
+
+    def test_parsed_with_data_no_min_clearing_less_minutes(self):
+        self.plan1.with_min_clearing = False
+        self.plan1.included_minutes = 100
+        self.plan1.save()
+
+        for c in Consumption.objects.filter(phone__plan=self.plan1):
+            c.included_min = 80
+            c.save()
+
+        self.obj.make_adjustments()
+
+        self.assertEqual(self.obj.min_penalty, 0)
+        self.assertEqual(self.obj.sms_penalty, 0)
+
+        for c in Consumption.objects.all():
+            self.assertEqual(c.min_penalty, 0)
+            self.assertEqual(c.sms_penalty, 0)
+
+    def test_parsed_with_data_no_min_clearing_more_minutes(self):
+        self.plan1.with_min_clearing = False
+        self.plan1.included_minutes = 100
+        self.plan1.save()
+
+        for c in Consumption.objects.filter(phone__plan=self.plan1):
+            c.included_min = 100
+            c.exceeded_min = 20
+            c.save()
+
+        self.obj.make_adjustments()
+
+        self.assertEqual(self.obj.min_penalty, 0)
+        self.assertEqual(self.obj.sms_penalty, 0)
+
+        for c in Consumption.objects.all():
+            self.assertEqual(c.min_penalty, 0)
+            self.assertEqual(c.sms_penalty, 0)
+
+    def test_parsed_with_data_with_min_clearing_all_minutes_used(self):
+        assert self.plan1.with_min_clearing
+        self.plan1.included_minutes = 100
+        self.plan1.save()
+
+        for c in Consumption.objects.filter(phone__plan=self.plan1):
+            c.included_min = 100
+            c.save()
+
+        self.obj.make_adjustments()
+
+    def test_parsed_with_data_with_min_clearing_minutes_left(self):
+        self.plan1.with_min_clearing = False
+        self.plan1.included_minutes = 100
+        self.plan1.save()
+
+        c1, c2, c3 = Consumption.objects.filter(phone__plan=self.plan1)
+
+        c1.included_min = 50
+        c1.save()
+
+        c2.included_min = 80
+        c2.save()
+
+        c3.included_min = 120
+        c3.save()
+
+        # total available minutes is 300, only 250 were used.
+        # penalty is 50 minutes to be distributed between c1 and c2
+
+        self.obj.make_adjustments()
+
+        self.assertEqual(self.obj.min_penalty, 50)
+        self.assertEqual(self.obj.sms_penalty, 0)
+
+        for c in Consumption.objects.all():
+            self.assertEqual(c.min_penalty, 0)
+            self.assertEqual(c.sms_penalty, 0)
 
 
 class ConsumptionTestCase(BaseModelTestCase):
