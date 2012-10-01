@@ -10,7 +10,7 @@ from django.db.models.signals import post_save
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User)
-    leader = models.ForeignKey(User, related_name='leadered_by', null=True)
+    leader = models.ForeignKey(User, related_name='leadering', null=True)
 
     def __unicode__(self):
         leader = self.leader
