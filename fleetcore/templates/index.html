@@ -15,7 +15,7 @@
     {% if user.phone %}
     <h4>User information</h4>
     {% with user.get_profile.leader as leader %}
-    <dl>
+    <dl class="dl-horizontal">
         <dt>Phone Number</dt>
         <dd>{{ user.phone.number }}</dd>
         <dt>Plan</dt>
