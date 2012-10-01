@@ -176,9 +176,6 @@ class Bill(models.Model):
             raise Bill.AdjustmentError('Bill must be parsed before making '
                                        'adjustments.')
 
-        #for c in self.consumption_set.all():
-        #    print(c)
-
     def notify_users(self):
         """Notify users about this bill."""
 
