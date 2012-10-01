@@ -206,7 +206,7 @@ class Plan(models.Model):
 
 class Phone(models.Model):
     number = models.PositiveIntegerField()
-    user = models.ForeignKey(User)
+    user = models.OneToOneField(User)
     plan = models.ForeignKey(Plan)
     notes = models.TextField(blank=True)
     active_since = models.DateTimeField(default=datetime.today)

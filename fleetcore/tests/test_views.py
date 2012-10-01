@@ -37,7 +37,6 @@ class AuthenticatedTestCase(BaseViewTestCase):
 
     def test_home(self):
         response = self.client.get(reverse('home'))
-        self.assertContains(response, fleetcore.NAME)
         self.assertContains(response,
                             '<a href="%s">Logout</a>' % reverse('logout'))
         self.assertTemplateUsed(response, 'index.html')

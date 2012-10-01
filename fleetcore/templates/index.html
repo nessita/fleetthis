@@ -10,5 +10,29 @@
 {% endblock %}
 
 {% block content %}
-    <h1>{{ app_name }}</h1>
+    <h1>{{ user.get_full_name }}</h1>
+
+    {% if user.phone %}
+    <h4>User information</h4>
+    {% with user.get_profile.leader as leader %}
+    <dl>
+        <dt>Phone Number</dt>
+        <dd>{{ user.phone.number }}</dd>
+        <dt>Plan</dt>
+        <dd>{{ user.phone.plan }}</dd>
+        <dt>Leader</dt>
+        <dd>{% firstof leader.get_full_name leader.username %}</dd>
+    </dl>
+    {% endwith %}
+    {% endif %}
+
+    {% if user.leadering.count %}
+    <h4>Leadering</h4>
+    <ul>
+        {% for profile in user.leadering.all %}
+            <li>{{ profile.user.get_full_name }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
 {% endblock %}

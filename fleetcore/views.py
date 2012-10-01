@@ -11,5 +11,4 @@ import fleetcore
 
 @login_required
 def home(request):
-    return TemplateResponse(request, template='index.html',
-                            context=dict(app_name=fleetcore.NAME))
+    return TemplateResponse(request, template='index.html')
