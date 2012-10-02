@@ -33,6 +33,19 @@ SUBJECT = 'Total del celu (consumo de %s)'
 
 BODY = """Hola %(leader)s!
 
+OJO: Este es el PRIMER mes en el que hay que usar la cuenta NUEVA (número
+725615496) para pagar. A partir de ahora, te recomiendo romper las facturas
+anteriores que usabas para pagar, para evitar confusiones.
+
+En un ratito te mando otro mail con un pdf que podés imprimir, y que contiene
+el código de barras "corto" que se puede usar para los pagos abiertos de
+Claro.
+
+Por otro lado, es importante notar que los totales de este mes incluyen, para
+aquellas líneas que pidieron packs de mensajes, el proporcional del pack de
+Septiembre más el abono adelantado del pack de Octubre (o sea, casi 2 packs
+enteros).
+
 A continuación el detalle del consumo del mes %(month)s, detallado por nro. de
 teléfono/persona:
 
@@ -52,10 +65,6 @@ PD: este es un mail generado automáticamente, pero podés escribirme mail a
 esta dirección que yo lo recibo sin drama (el mail cambió a uno dedicado a
 esto de la flota, fijate que ahora es fleetthis@gmail.com).
 
-PD2: este es el *último* mes en el que hay que usar la cuenta 613912138 para
-pagar. A partir del mes que viene, habrá que usar otra cuenta, te paso los
-datos cuando mande el consumo.
-
 Detalles de los planes (con la info concreta de los mensajes):
 
 %(plan_details)s
@@ -70,8 +79,11 @@ def send_email_to_leader(who, month, phone_details, grand_total, plan_details):
     to_list.append(ME)
 
     if os.getenv('DEBUG', True):
-        print subject
-        print body
+        print('==============================================================')
+        print(subject)
+        print('--------------------------------------------------------------')
+        print(body)
+        print('==============================================================')
     else:
         send_mail(subject, body, ME, to_list, fail_silently=False)
 
@@ -84,20 +96,19 @@ def helper(filename=None):
     if filename is None:
         filename = '%s/celu-%s-%02i.csv' % \
                    (last_month.year, last_month.year, last_month.month)
-        print 'Looking for filename %s, is that correct?' % filename
+        print('Looking for filename %s, is that correct?' % filename)
         raw_input()
 
     assert os.path.exists(filename)
 
     reader = csv.reader(file(filename))
     for row in reader:
+        row = map(lambda r: r.decode('utf-8'), row)
         if row[0] in PEOPLE and not row[1].startswith('$') and len(row) == 32:
-            innerwho = PHONE_LINE % dict(real_user=row[1].decode('utf-8'),
+            innerwho = PHONE_LINE % dict(real_user=row[1],
                                          plan_name=row[4],
                                          number=row[2])
             totals[row[0]][innerwho] = float(row[-1].strip('$'))
-        ##else:
-        ##    print row
 
     all_plans = Plan.objects.all()
     month = last_month.strftime('%B %Y')
