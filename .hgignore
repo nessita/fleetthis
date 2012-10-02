@@ -3,4 +3,5 @@ syntax: glob
 local_settings.py
 db.sqlite
 fleetthis/static/
+fleetthis/media/invoices/
 *.pyc
