@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
+import logging
 import os
 
 from datetime import datetime
@@ -10,6 +11,7 @@ from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.db import models, transaction
+from django.db.models import Sum
 from django.db.models.signals import post_save
 
 from fleetcore import pdf2cell
@@ -179,6 +181,28 @@ class Bill(models.Model):
             raise Bill.AdjustmentError('Bill must be parsed before making '
                                        'adjustments.')
 
+        plans = Plan.objects.filter(phone__consumption__bill=self,
+                                    with_min_clearing=True).distinct()
+        for plan in plans:
+            if Penalty.objects.filter(bill=self, plan=plan).count() > 0:
+                logging.warning('Penalty for "%s" and "%s" already exists.',
+                                self, plan)
+                continue
+
+            consumptions = self.consumption_set.filter(phone__plan=plan)
+            if not consumptions:
+                logging.info('There is no consumptions for "%s" and "%s".',
+                             self, plan)
+                continue
+
+            target = plan.included_min * consumptions.count()
+            real = consumptions.aggregate(included_min=Sum('included_min'),
+                                          exceeded_min=Sum('exceeded_min'))
+            real = real['included_min'] + real['exceeded_min']
+            if real < target:
+                penalty = Penalty.objects.create(bill=self, plan=plan,
+                                                 minutes=target - real)
+
     def notify_users(self):
         """Notify users about this bill."""
 
@@ -189,7 +213,7 @@ class Plan(models.Model):
     price = MoneyField()
     min_price = MoneyField()
     sms_price = MoneyField()
-    included_minutes = models.PositiveIntegerField(default=0)
+    included_min = models.PositiveIntegerField(default=0)
     included_sms = models.PositiveIntegerField(default=0)
     description = models.TextField(blank=True)
     with_min_clearing = models.BooleanField(default=True)
@@ -291,7 +315,7 @@ class Consumption(models.Model):
         plan = self.phone.plan
         if plan.with_min_clearing:
             total -= self.monthly_price
-            total += plan.included_minutes * plan.min_price
+            total += plan.included_min * plan.min_price
         else:
             total = self.monthly_price
 
@@ -316,3 +340,6 @@ class Penalty(models.Model):
     plan = models.ForeignKey(Plan)
     minutes = MinuteField()
     sms = SMSField()
+
+    class Meta:
+        unique_together = ('bill', 'plan')

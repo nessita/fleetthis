@@ -232,32 +232,28 @@ class MakeAdjustmentsTestCase(BillTestCase):
         super(MakeAdjustmentsTestCase, self).setUp()
 
         data = (
-            ('PLAN1', 1234567890),
-            ('PLAN1', 1234560987),
-            ('PLAN1', 1265437890),
-            ('PLAN2', 1987654320),
+            1234567890,
+            1234560987,
+            1265437890,
         )
-        for p, i in data:
-            plan, created = Plan.objects.get_or_create(name=p)
-            if created:
-                setattr(self, p.lower(), plan)
-
-            phone = Phone.objects.create(
-                number=i, plan=plan,
-                user=User.objects.create(username=str(i)),
-            )
-            Consumption.objects.create(
-                phone=phone, bill=self.obj,
-            )
-
-        self.plan2.included_minutes = 333
-        self.plan2.save()
+        self.plan1 = Plan.objects.create(name='PLAN1', included_min=100)
+        for p in data:
+            self._make_consumption(self.plan1, p)
 
         with open(self.obj.invoice.path, 'w') as f:
             self.addCleanup(os.remove, self.obj.invoice.path)
         self.mock_pdf_parser.return_value = {}
         self.obj.parse_invoice()
         assert self.obj.parsing_date is not None
+
+    def _make_consumption(self, plan, phone_number, bill=None):
+        phone = Phone.objects.create(
+            number=phone_number, plan=plan,
+            user=User.objects.create(username=str(phone_number)),
+        )
+        if bill is None:
+            bill = self.obj
+        return Consumption.objects.create(phone=phone, bill=bill)
 
     def test_no_parsing_date(self):
         self.obj.parsing_date = None
@@ -267,12 +263,15 @@ class MakeAdjustmentsTestCase(BillTestCase):
         self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
 
     def test_parsed_but_no_data(self):
+        Consumption.objects.all().delete()
+
         self.obj.make_adjustments()
+
         self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
 
-    def test_parsed_with_data_no_min_clearing_less_minutes(self):
+    def test_with_data_no_min_clearing_less_minutes(self):
         self.plan1.with_min_clearing = False
-        self.plan1.included_minutes = 100
+        self.plan1.included_min = 100
         self.plan1.save()
 
         for c in Consumption.objects.filter(phone__plan=self.plan1):
@@ -287,9 +286,9 @@ class MakeAdjustmentsTestCase(BillTestCase):
             self.assertEqual(c.min_penalty, 0)
             self.assertEqual(c.sms_penalty, 0)
 
-    def test_parsed_with_data_no_min_clearing_more_minutes(self):
+    def test_with_data_no_min_clearing_more_minutes(self):
         self.plan1.with_min_clearing = False
-        self.plan1.included_minutes = 100
+        self.plan1.included_min = 100
         self.plan1.save()
 
         for c in Consumption.objects.filter(phone__plan=self.plan1):
@@ -305,9 +304,9 @@ class MakeAdjustmentsTestCase(BillTestCase):
             self.assertEqual(c.min_penalty, 0)
             self.assertEqual(c.sms_penalty, 0)
 
-    def test_parsed_with_data_with_min_clearing_all_minutes_used(self):
+    def test_with_data_with_min_clearing_all_minutes_used(self):
         assert self.plan1.with_min_clearing
-        self.plan1.included_minutes = 100
+        self.plan1.included_min = 100
         self.plan1.save()
 
         for c in Consumption.objects.filter(phone__plan=self.plan1):
@@ -317,9 +316,9 @@ class MakeAdjustmentsTestCase(BillTestCase):
         self.obj.make_adjustments()
         self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
 
-    def test_parsed_with_data_with_min_clearing_minutes_left(self):
-        self.plan1.with_min_clearing = False
-        self.plan1.included_minutes = 100
+    def test_with_data_with_min_clearing_minutes_left(self):
+        self.plan1.with_min_clearing = True
+        self.plan1.included_min = 100
         self.plan1.save()
 
         c1, c2, c3 = Consumption.objects.filter(phone__plan=self.plan1)
@@ -330,7 +329,8 @@ class MakeAdjustmentsTestCase(BillTestCase):
         c2.included_min = 80
         c2.save()
 
-        c3.included_min = 120
+        c3.included_min = 110
+        c3.exceeded_min = 10
         c3.save()
 
         # total available minutes is 300, only 250 were used.
@@ -340,12 +340,48 @@ class MakeAdjustmentsTestCase(BillTestCase):
 
         self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 1)
         penalty = Penalty.objects.get()
+        self.assertEqual(penalty.bill, self.obj)
+        self.assertEqual(penalty.plan, self.plan1)
         self.assertEqual(penalty.minutes, 50)
         self.assertEqual(penalty.sms, 0)
 
         for c in Consumption.objects.all():
             self.assertEqual(c.min_penalty, 0)
             self.assertEqual(c.sms_penalty, 0)
+
+    def test_with_more_plans(self):
+        self.test_with_data_with_min_clearing_minutes_left()
+
+        plan2 = Plan.objects.create(name='PLAN2', included_min=333)
+        c = self._make_consumption(plan2, 1987654320)
+        c.included_min = 20
+        c.exceeded_min = 13
+        c.save()
+
+        with patch('fleetcore.models.logging.warning') as mock:
+            self.obj.make_adjustments()
+            mock.assert_called_once_with('Penalty for "%s" and "%s" already '
+                                         'exists.', self.obj, self.plan1)
+
+        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 2)
+        penalty = Penalty.objects.get(plan=plan2)
+        self.assertEqual(penalty.bill, self.obj)
+        self.assertEqual(penalty.minutes, 300)
+        self.assertEqual(penalty.sms, 0)
+
+    def test_with_other_bills(self):
+        bill = self.factory.make_bill()
+        plan2 = Plan.objects.create(name='PLAN2', included_min=333)
+        self._make_consumption(plan2, 7539518520, bill=bill)
+        self._make_consumption(plan2, 7539518521, bill=bill)
+        assert plan2.with_min_clearing
+
+        self.plan1.included_min = 0  # do not have spare minutes
+        self.plan1.save()
+
+        self.obj.make_adjustments()
+
+        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
 
 
 class ConsumptionTestCase(BaseModelTestCase):

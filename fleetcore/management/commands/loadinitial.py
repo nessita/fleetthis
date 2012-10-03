@@ -124,9 +124,8 @@ class Command(BaseCommand):
         plans = {}
         for i, j, mins, min_price, sms, sms_price, desc in PLANS:
             plans[i] = Plan.objects.create(
-                name=i, price=j, included_minutes=mins,
-                min_price=min_price, included_sms=sms, sms_price=sms_price,
-                description=desc,
+                name=i, price=j, included_min=mins, min_price=min_price,
+                included_sms=sms, sms_price=sms_price, description=desc,
             )
 
         tcl16 = plans['TCL16']
