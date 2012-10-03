@@ -36,12 +36,13 @@ from fleetcore.pdf2cell import (
 
 
 def validate_tax(value):
+    """Tax value must be a number in the [0, 1) interval."""
     if not (Decimal('0') <= value and value < Decimal('1')):
         raise ValidationError('%r should be in the interval [0, 1)' % value)
 
 
 class MoneyField(models.DecimalField):
-
+    """Field to store price/money amount values."""
     def __init__(self, *args, **kwargs):
         default = dict(default=Decimal('0'), decimal_places=3, max_digits=10)
         default.update(kwargs)
@@ -49,7 +50,7 @@ class MoneyField(models.DecimalField):
 
 
 class TaxField(models.DecimalField):
-
+    """Field to store a tax value."""
     def __init__(self, *args, **kwargs):
         validators = kwargs.get('validators', [])
         validators.append(validate_tax)
@@ -61,7 +62,7 @@ class TaxField(models.DecimalField):
 
 
 class MinuteField(models.DecimalField):
-
+    """Field to store a minutes value."""
     def __init__(self, *args, **kwargs):
         default = dict(default=Decimal('0'), decimal_places=2, max_digits=10)
         default.update(kwargs)
@@ -69,7 +70,7 @@ class MinuteField(models.DecimalField):
 
 
 class SMSField(models.PositiveIntegerField):
-
+    """Field to store a SMS units value."""
     def __init__(self, *args, **kwargs):
         default = dict(default=0)
         default.update(kwargs)
@@ -77,6 +78,7 @@ class SMSField(models.PositiveIntegerField):
 
 
 class Fleet(models.Model):
+    """Phones fleet."""
     user = models.ForeignKey(User)
     account_number = models.PositiveIntegerField()
     email = models.EmailField()
@@ -87,6 +89,7 @@ class Fleet(models.Model):
 
 
 class Bill(models.Model):
+    """Monthly bill for a fleet."""
     fleet = models.ForeignKey(Fleet)
     invoice = models.FileField(upload_to='invoices')
     billing_date = models.DateField(null=True, blank=True)
@@ -181,6 +184,7 @@ class Bill(models.Model):
 
 
 class Plan(models.Model):
+    """Phone line plan."""
     name = models.CharField(max_length=100)
     price = MoneyField()
     min_price = MoneyField()
@@ -213,7 +217,7 @@ class DataPack(models.Model):
 
 class SMSPack(models.Model):
     """SMS pack."""
-    units = models.PositiveIntegerField()
+    units = SMSField()
     price = MoneyField()
 
     def __unicode__(self):
@@ -221,6 +225,7 @@ class SMSPack(models.Model):
 
 
 class Phone(models.Model):
+    """Phone line."""
     number = models.PositiveIntegerField()
     user = models.OneToOneField(User)
     plan = models.ForeignKey(Plan)
@@ -242,6 +247,7 @@ class Phone(models.Model):
 
 
 class Consumption(models.Model):
+    """Phone line consumption for a bill."""
     phone = models.ForeignKey(Phone)
     bill = models.ForeignKey(Bill)
 
@@ -305,7 +311,7 @@ class Consumption(models.Model):
 
 
 class Penalty(models.Model):
-
+    """Penalty to be charged to phone lines in a plan for a bill."""
     bill = models.ForeignKey(Bill)
     plan = models.ForeignKey(Plan)
     minutes = MinuteField()
