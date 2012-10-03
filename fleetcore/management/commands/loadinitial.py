@@ -8,7 +8,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import Group, User
-from fleetcore.models import Fleet, Plan, Phone
+from fleetcore.models import DataPack, Fleet, Plan, Phone, SMSPack
 
 
 PLANS = (
@@ -44,6 +44,21 @@ Min. destino a móviles del cliente: $ 0.00 $ 0.00
 Min. destino a móviles: $0.27 $ 0.27
 Los SMS no están incluídos en el abono, cada uno sale $ 0.24.
 """),
+)
+
+DATA_PACKS = (
+    (None, Decimal('45.00')),
+    (None, Decimal('50.00')),
+)
+
+SMS_PACKS = (
+    (50, Decimal('5.50')),
+    (100, Decimal('10.00')),
+    (200, Decimal('17.00')),
+    (300, Decimal('22.00')),
+    (400, Decimal('27.00')),
+    (500, Decimal('32.50')),
+    (1000, Decimal('49.90')),
 )
 
 PHONES = {
@@ -99,6 +114,12 @@ class Command(BaseCommand):
             user=admin, account_number=725615496,
             email='fleetthis@gmail.com', provider='Claro',
         )
+
+        for kbs, price in DATA_PACKS:
+            DataPack.objects.create(kbs=kbs, price=price)
+
+        for sms, price in SMS_PACKS:
+            SMSPack.objects.create(units=sms, price=price)
 
         plans = {}
         for i, j, mins, min_price, sms, sms_price, desc in PLANS:

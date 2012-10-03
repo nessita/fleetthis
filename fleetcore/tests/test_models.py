@@ -17,10 +17,12 @@ from mock import patch
 from fleetcore.models import (
     Bill,
     Consumption,
+    DataPack,
     Fleet,
     Penalty,
     Phone,
     Plan,
+    SMSPack,
 )
 from fleetcore.pdf2cell import (
     EQUIPMENT_PRICE,
@@ -383,6 +385,18 @@ class PlanTestCase(BaseModelTestCase):
     """The test suite for the Plan model."""
 
     model = Plan
+
+
+class DataPackTestCase(BaseModelTestCase):
+    """The test suite for the DataPack model."""
+
+    model = DataPack
+
+
+class SMSPackTestCase(BaseModelTestCase):
+    """The test suite for the SMSPack model."""
+
+    model = SMSPack
 
 
 class FleetTestCase(BaseModelTestCase):

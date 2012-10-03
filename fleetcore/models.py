@@ -201,10 +201,31 @@ class Plan(models.Model):
                                       min_clearing, sms_clearing)
 
 
+class DataPack(models.Model):
+    """Internet data pack."""
+    kbs = models.PositiveIntegerField(blank=True, null=True)
+    price = MoneyField()
+
+    def __unicode__(self):
+        kbs = '%s kbs' % self.kbs if self.kbs else '(unlimited)'
+        return '%s - $%s' % (kbs, self.price)
+
+
+class SMSPack(models.Model):
+    """SMS pack."""
+    units = models.PositiveIntegerField()
+    price = MoneyField()
+
+    def __unicode__(self):
+        return '%s sms - $%s' % (self.units, self.price)
+
+
 class Phone(models.Model):
     number = models.PositiveIntegerField()
     user = models.OneToOneField(User)
     plan = models.ForeignKey(Plan)
+    data_pack = models.ForeignKey(DataPack, blank=True, null=True)
+    sms_pack = models.ForeignKey(SMSPack, blank=True, null=True)
     notes = models.TextField(blank=True)
     active_since = models.DateTimeField(default=datetime.today)
     active_to = models.DateTimeField(null=True, blank=True)

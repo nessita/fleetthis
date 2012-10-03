@@ -15,10 +15,12 @@ from django.contrib.auth.models import User
 from fleetcore.models import (
     Bill,
     Consumption,
+    DataPack,
     Fleet,
     Penalty,
     Phone,
     Plan,
+    SMSPack,
 )
 
 
@@ -63,6 +65,14 @@ class Factory(object):
     def make_plan(self, **kwargs):
         default = dict()
         return self.make_something(Plan, default, **kwargs)
+
+    def make_datapack(self, **kwargs):
+        default = dict()
+        return self.make_something(DataPack, default, **kwargs)
+
+    def make_smspack(self, **kwargs):
+        default = dict(units=self.make_random_number())
+        return self.make_something(SMSPack, default, **kwargs)
 
     def make_phone(self, **kwargs):
         default = dict(number=self.make_random_number(),

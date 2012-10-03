@@ -20,6 +20,14 @@
         <dd>{{ user.phone.number }}</dd>
         <dt>Plan</dt>
         <dd>{{ user.phone.plan }}</dd>
+        {% if user.phone.data_pack %}
+            <dt>Data pack</dt>
+            <dd>{{ user.phone.data_pack }}</dd>
+        {% endif %}
+        {% if user.phone.sms_pack %}
+            <dt>SMS pack</dt>
+            <dd>{{ user.phone.sms_pack }}</dd>
+        {% endif %}
         <dt>Leader</dt>
         <dd>{% firstof leader.get_full_name leader.username %}</dd>
     </dl>
