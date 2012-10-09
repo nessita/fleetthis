@@ -225,11 +225,11 @@ class ParseInvoiceTestCase(BillTestCase):
         self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
 
 
-class MakeAdjustmentsTestCase(BillTestCase):
-    """The test suite for the make_adjustments method for the Bill model."""
+class CalculatePenaltiesTestCase(BillTestCase):
+    """The test suite for the calculate_penalties method for the Bill model."""
 
     def setUp(self):
-        super(MakeAdjustmentsTestCase, self).setUp()
+        super(CalculatePenaltiesTestCase, self).setUp()
 
         data = (
             1234567890,
@@ -255,19 +255,25 @@ class MakeAdjustmentsTestCase(BillTestCase):
             bill = self.obj
         return Consumption.objects.create(phone=phone, bill=bill)
 
+    def assert_no_penalties(self):
+        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
+        for c in Consumption.objects.all():
+            self.assertEqual(c.min_penalty, 0)
+            self.assertEqual(c.sms_penalty, 0)
+
     def test_no_parsing_date(self):
         self.obj.parsing_date = None
         self.obj.save()
 
-        self.assertRaises(Bill.AdjustmentError, self.obj.make_adjustments)
-        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
+        self.assertRaises(Bill.AdjustmentError, self.obj.calculate_penalties)
+        self.assert_no_penalties()
 
     def test_parsed_but_no_data(self):
         Consumption.objects.all().delete()
 
-        self.obj.make_adjustments()
+        self.obj.calculate_penalties()
 
-        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
+        self.assert_no_penalties()
 
     def test_with_data_no_min_clearing_less_minutes(self):
         self.plan1.with_min_clearing = False
@@ -278,9 +284,9 @@ class MakeAdjustmentsTestCase(BillTestCase):
             c.included_min = 80
             c.save()
 
-        self.obj.make_adjustments()
+        self.obj.calculate_penalties()
 
-        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
+        self.assert_no_penalties()
 
         for c in Consumption.objects.all():
             self.assertEqual(c.min_penalty, 0)
@@ -296,9 +302,9 @@ class MakeAdjustmentsTestCase(BillTestCase):
             c.exceeded_min = 20
             c.save()
 
-        self.obj.make_adjustments()
+        self.obj.calculate_penalties()
 
-        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
+        self.assert_no_penalties()
 
         for c in Consumption.objects.all():
             self.assertEqual(c.min_penalty, 0)
@@ -313,8 +319,8 @@ class MakeAdjustmentsTestCase(BillTestCase):
             c.included_min = 100
             c.save()
 
-        self.obj.make_adjustments()
-        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
+        self.obj.calculate_penalties()
+        self.assert_no_penalties()
 
     def test_with_data_with_min_clearing_minutes_left(self):
         self.plan1.with_min_clearing = True
@@ -336,7 +342,7 @@ class MakeAdjustmentsTestCase(BillTestCase):
         # total available minutes is 300, only 250 were used.
         # penalty is 50 minutes to be distributed between c1 and c2
 
-        self.obj.make_adjustments()
+        self.obj.calculate_penalties()
 
         self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 1)
         penalty = Penalty.objects.get()
@@ -344,10 +350,6 @@ class MakeAdjustmentsTestCase(BillTestCase):
         self.assertEqual(penalty.plan, self.plan1)
         self.assertEqual(penalty.minutes, 50)
         self.assertEqual(penalty.sms, 0)
-
-        for c in Consumption.objects.all():
-            self.assertEqual(c.min_penalty, 0)
-            self.assertEqual(c.sms_penalty, 0)
 
     def test_with_more_plans(self):
         self.test_with_data_with_min_clearing_minutes_left()
@@ -359,7 +361,7 @@ class MakeAdjustmentsTestCase(BillTestCase):
         c.save()
 
         with patch('fleetcore.models.logging.warning') as mock:
-            self.obj.make_adjustments()
+            self.obj.calculate_penalties()
             mock.assert_called_once_with('Penalty for "%s" and "%s" already '
                                          'exists.', self.obj, self.plan1)
 
@@ -379,15 +381,46 @@ class MakeAdjustmentsTestCase(BillTestCase):
         self.plan1.included_min = 0  # do not have spare minutes
         self.plan1.save()
 
-        self.obj.make_adjustments()
+        self.obj.calculate_penalties()
 
-        self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
+        self.assert_no_penalties()
+
+    def test_penalties_applied(self):
+        self.test_with_data_with_min_clearing_minutes_left()
+        c1, c2, c3 = Consumption.objects.filter(phone__plan=self.plan1)
+
+        self.assertEqual(c1.min_penalty, 40)
+        self.assertEqual(c1.sms_penalty, 0)
+
+        self.assertEqual(c2.min_penalty, 10)
+        self.assertEqual(c2.sms_penalty, 0)
+
+        self.assertEqual(c3.min_penalty, 0)
+        self.assertEqual(c3.sms_penalty, 0)
 
 
 class ConsumptionTestCase(BaseModelTestCase):
     """The test suite for the Consumption model."""
 
     model = Consumption
+
+    def test_total_min(self):
+        self.assertEqual(self.obj.total_min, 0)
+
+    def test_total_min_is_set_on_save(self):
+        self.obj.included_min = 12
+        self.obj.exceeded_min = 18
+
+        self.obj.save()
+        self.assertEqual(self.obj.total_min, 12 + 18)
+
+    def test_wrong_total_min_is_corrected_on_save(self):
+        self.obj.included_min = 12
+        self.obj.exceeded_min = 15
+        self.obj.total_min = 30
+
+        self.obj.save()
+        self.assertEqual(self.obj.total_min, 12 + 15)
 
 
 class PhoneTestCase(BaseModelTestCase):

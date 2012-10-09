@@ -121,6 +121,9 @@ class Bill(models.Model):
     def __unicode__(self):
         return 'Bill for "%s" (date: %s)' % (self.fleet, self.billing_date)
 
+    def _apply_penalty(self, consumptions, penalty):
+        consumptions = consumptions.order_by('total_min')
+
     @transaction.commit_on_success
     def parse_invoice(self):
         """Parse this bill's invoice.
@@ -175,8 +178,8 @@ class Bill(models.Model):
         self.provider_number = data.get('bill_number', '')
         self.save()
 
-    def make_adjustments(self):
-        """Make all the required adjustment to Consumptions."""
+    def calculate_penalties(self):
+        """Calculate penalties per plan with clearing."""
         if self.parsing_date is None:
             raise Bill.AdjustmentError('Bill must be parsed before making '
                                        'adjustments.')
@@ -196,12 +199,14 @@ class Bill(models.Model):
                 continue
 
             target = plan.included_min * consumptions.count()
-            real = consumptions.aggregate(included_min=Sum('included_min'),
-                                          exceeded_min=Sum('exceeded_min'))
-            real = real['included_min'] + real['exceeded_min']
+            real = consumptions.aggregate(mins=Sum('total_min'))['mins']
             if real < target:
                 penalty = Penalty.objects.create(bill=self, plan=plan,
                                                  minutes=target - real)
+                self._apply_penalty(consumptions, penalty)
+
+    def make_adjustments(self):
+        """Make all the required adjustment to Consumptions."""
 
     def notify_users(self):
         """Notify users about this bill."""
@@ -295,6 +300,7 @@ class Consumption(models.Model):
     reported_total = MoneyField('Total ($)')
 
     # calculated *and* stored in the DB
+    total_min = MinuteField('Suma de minutos consumidos y excedentes')
     min_penalty = MinuteField('Multa de minutos')
     sms_penalty = SMSField('Multa de mensajes')
     total_before_taxes = MoneyField()
@@ -321,6 +327,7 @@ class Consumption(models.Model):
 
         # XXX: missing: add non-consumed minutes if aplicable
 
+        self.total_min = self.included_min + self.exceeded_min
         self.total_before_taxes = total
         self.taxes = self.bill.taxes
         self.total_before_round = (self.total_before_taxes *
