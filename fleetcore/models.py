@@ -1,13 +1,16 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import logging
 import os
 
+from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
+from itertools import tee, izip
 
 from django.contrib.auth.models import User
 from django.db import models, transaction
@@ -35,6 +38,13 @@ from fleetcore.pdf2cell import (
     TOTAL_PRICE,
     USER,
 )
+
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return izip(a, b)
 
 
 def validate_tax(value):
@@ -119,10 +129,66 @@ class Bill(models.Model):
         return self.internal_tax + self.iva_tax + self.other_tax
 
     def __unicode__(self):
-        return 'Bill for "%s" (date: %s)' % (self.fleet, self.billing_date)
+        return 'Bill "%s" (date: %s)' % (self.fleet, self.billing_date)
 
-    def _apply_penalty(self, consumptions, penalty):
-        consumptions = consumptions.order_by('total_min')
+    def _apply_penalty(self, consumptions, penalty_min):
+        assert penalty_min > 0 and consumptions.count() > 1
+
+        # prioritize readable code over efficient code
+        data = defaultdict(list)
+        for c in consumptions:
+            # group by used minutes
+            data[c.total_min].append(c)
+
+        import pdb; pdb.set_trace()
+
+        # sort ascending
+        totals = pairwise(sorted(data.iterkeys()))
+        for total1, total2 in totals:
+            # distribute penalty minutes within the same category
+            cons = data[total1]
+            len_cons = len(cons)
+
+            diff = total2 - total1
+            assert diff > 0  # because the key are ascendingly sorted
+
+            to_apply = min(diff * len_cons, penalty_min)
+            penalty_min -= to_apply
+
+            to_apply = to_apply / len_cons
+            assert to_apply == penalty_min or to_apply == diff
+            for c in cons:
+                c.penalty_min = c.penalty_min + to_apply
+                c.save()
+                assert penalty_min == 0 or c.total_min == total2
+
+            if penalty_min > 0:
+                # update data
+                data[total2].extend(cons)
+            else:
+                # penalty was fully applied
+                return
+
+    def apply_penalty(self, consumptions, penalty):
+        plan_mins = penalty.plan.included_min
+        penalty_min = penalty.minutes
+        assert penalty_min > 0 and plan_mins > 0
+
+        # filter those consumptions with unused minutes from the plan total
+        consumptions = consumptions.filter(total_min__lt=plan_mins)
+
+        amount = consumptions.count()
+        if amount == 0:
+            logging.warning('There is no consumption to apply the %s to.',
+                            penalty)
+        #elif amount == 1:
+        #    c = consumptions.get()
+        #    assert c.total_min + penalty_min <= plan_mins
+        #    c.penalty_min = penalty_min
+        #    c.save()
+        #    return
+        else:
+            self._apply_penalty(consumptions, penalty_min)
 
     @transaction.commit_on_success
     def parse_invoice(self):
@@ -203,7 +269,7 @@ class Bill(models.Model):
             if real < target:
                 penalty = Penalty.objects.create(bill=self, plan=plan,
                                                  minutes=target - real)
-                self._apply_penalty(consumptions, penalty)
+                self.apply_penalty(consumptions, penalty)
 
     def make_adjustments(self):
         """Make all the required adjustment to Consumptions."""
@@ -216,8 +282,8 @@ class Plan(models.Model):
     """Phone line plan."""
     name = models.CharField(max_length=100)
     price = MoneyField()
-    min_price = MoneyField()
-    sms_price = MoneyField()
+    price_min = MoneyField()
+    price_sms = MoneyField()
     included_min = models.PositiveIntegerField(default=0)
     included_sms = models.PositiveIntegerField(default=0)
     description = models.TextField(blank=True)
@@ -301,8 +367,8 @@ class Consumption(models.Model):
 
     # calculated *and* stored in the DB
     total_min = MinuteField('Suma de minutos consumidos y excedentes')
-    min_penalty = MinuteField('Multa de minutos')
-    sms_penalty = SMSField('Multa de mensajes')
+    penalty_min = MinuteField('Multa de minutos')
+    penalty_sms = SMSField('Multa de mensajes')
     total_before_taxes = MoneyField()
     taxes = TaxField()
     total_before_round = MoneyField()
@@ -321,7 +387,7 @@ class Consumption(models.Model):
         plan = self.phone.plan
         if plan.with_min_clearing:
             total -= self.monthly_price
-            total += plan.included_min * plan.min_price
+            total += plan.included_min * plan.price_min
         else:
             total = self.monthly_price
 
@@ -350,3 +416,7 @@ class Penalty(models.Model):
 
     class Meta:
         unique_together = ('bill', 'plan')
+
+    def __unicode__(self):
+        return 'Penalty of %s minutes for %s (%s)' % (self.minutes, self.bill,
+                                                 self.plan)

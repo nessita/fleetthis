@@ -122,10 +122,10 @@ class Command(BaseCommand):
             SMSPack.objects.create(units=sms, price=price)
 
         plans = {}
-        for i, j, mins, min_price, sms, sms_price, desc in PLANS:
+        for i, j, mins, price_min, sms, price_sms, desc in PLANS:
             plans[i] = Plan.objects.create(
-                name=i, price=j, included_min=mins, min_price=min_price,
-                included_sms=sms, sms_price=sms_price, description=desc,
+                name=i, price=j, included_min=mins, price_min=price_min,
+                included_sms=sms, price_sms=price_sms, description=desc,
             )
 
         tcl16 = plans['TCL16']

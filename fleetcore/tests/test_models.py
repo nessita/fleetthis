@@ -258,8 +258,8 @@ class CalculatePenaltiesTestCase(BillTestCase):
     def assert_no_penalties(self):
         self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
         for c in Consumption.objects.all():
-            self.assertEqual(c.min_penalty, 0)
-            self.assertEqual(c.sms_penalty, 0)
+            self.assertEqual(c.penalty_min, 0)
+            self.assertEqual(c.penalty_sms, 0)
 
     def test_no_parsing_date(self):
         self.obj.parsing_date = None
@@ -329,7 +329,8 @@ class CalculatePenaltiesTestCase(BillTestCase):
 
         c1, c2, c3 = Consumption.objects.filter(phone__plan=self.plan1)
 
-        c1.included_min = 50
+        c1.included_min = 35
+        c1.exceeded_min = 15
         c1.save()
 
         c2.included_min = 80
@@ -389,14 +390,14 @@ class CalculatePenaltiesTestCase(BillTestCase):
         self.test_with_data_with_min_clearing_minutes_left()
         c1, c2, c3 = Consumption.objects.filter(phone__plan=self.plan1)
 
-        self.assertEqual(c1.min_penalty, 40)
-        self.assertEqual(c1.sms_penalty, 0)
+        self.assertEqual(c1.penalty_min, 40)
+        self.assertEqual(c1.penalty_sms, 0)
 
-        self.assertEqual(c2.min_penalty, 10)
-        self.assertEqual(c2.sms_penalty, 0)
+        self.assertEqual(c2.penalty_min, 10)
+        self.assertEqual(c2.penalty_sms, 0)
 
-        self.assertEqual(c3.min_penalty, 0)
-        self.assertEqual(c3.sms_penalty, 0)
+        self.assertEqual(c3.penalty_min, 0)
+        self.assertEqual(c3.penalty_sms, 0)
 
 
 class ConsumptionTestCase(BaseModelTestCase):
