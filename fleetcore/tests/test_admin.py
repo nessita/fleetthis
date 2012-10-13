@@ -1,7 +1,7 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
 from __future__ import print_function
+from __future__ import unicode_literals
 
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
