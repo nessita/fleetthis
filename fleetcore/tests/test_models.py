@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
+import itertools
 import logging
 import os
 
@@ -289,8 +290,8 @@ class CalculatePenaltiesTestCase(BillTestCase):
         self.assert_no_penalties()
 
         for c in Consumption.objects.all():
-            self.assertEqual(c.min_penalty, 0)
-            self.assertEqual(c.sms_penalty, 0)
+            self.assertEqual(c.penalty_min, 0)
+            self.assertEqual(c.penalty_sms, 0)
 
     def test_with_data_no_min_clearing_more_minutes(self):
         self.plan1.with_min_clearing = False
@@ -307,8 +308,8 @@ class CalculatePenaltiesTestCase(BillTestCase):
         self.assert_no_penalties()
 
         for c in Consumption.objects.all():
-            self.assertEqual(c.min_penalty, 0)
-            self.assertEqual(c.sms_penalty, 0)
+            self.assertEqual(c.penalty_min, 0)
+            self.assertEqual(c.penalty_sms, 0)
 
     def test_with_data_with_min_clearing_all_minutes_used(self):
         assert self.plan1.with_min_clearing
@@ -366,6 +367,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
             mock.assert_called_once_with('Penalty for "%s" and "%s" already '
                                          'exists.', self.obj, self.plan1)
 
+        # two penalties, one from the invoked test and another from this one
         self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 2)
         penalty = Penalty.objects.get(plan=plan2)
         self.assertEqual(penalty.bill, self.obj)
@@ -389,6 +391,10 @@ class CalculatePenaltiesTestCase(BillTestCase):
     def test_penalties_applied(self):
         self.test_with_data_with_min_clearing_minutes_left()
         c1, c2, c3 = Consumption.objects.filter(phone__plan=self.plan1)
+        # c1 has 50 used mins, and c2 has 80
+        # penalty to apply is 50 minutes, so c1 should end up with
+        # 40 penalty mins, and c2 with 10 (thus both will have a total
+        # of 90 used mins).
 
         self.assertEqual(c1.penalty_min, 40)
         self.assertEqual(c1.penalty_sms, 0)
@@ -409,19 +415,23 @@ class ConsumptionTestCase(BaseModelTestCase):
         self.assertEqual(self.obj.total_min, 0)
 
     def test_total_min_is_set_on_save(self):
-        self.obj.included_min = 12
-        self.obj.exceeded_min = 18
+        for i, j, k in itertools.product([0, 13], repeat=3):
+            self.obj.included_min = i
+            self.obj.exceeded_min = j
+            self.obj.penalty_min = k
 
-        self.obj.save()
-        self.assertEqual(self.obj.total_min, 12 + 18)
+            self.obj.save()
+            self.assertEqual(self.obj.total_min, i + j + k)
 
     def test_wrong_total_min_is_corrected_on_save(self):
-        self.obj.included_min = 12
-        self.obj.exceeded_min = 15
-        self.obj.total_min = 30
+        for i, j, k in itertools.product([0, 19], repeat=3):
+            self.obj.included_min = i
+            self.obj.exceeded_min = j
+            self.obj.penalty_min = k
+            self.obj.total_min = (i + j + k) / 2
 
-        self.obj.save()
-        self.assertEqual(self.obj.total_min, 12 + 15)
+            self.obj.save()
+            self.assertEqual(self.obj.total_min, i + j + k)
 
 
 class PhoneTestCase(BaseModelTestCase):

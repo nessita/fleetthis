@@ -131,7 +131,7 @@ class Bill(models.Model):
     def __unicode__(self):
         return 'Bill "%s" (date: %s)' % (self.fleet, self.billing_date)
 
-    def _apply_penalty(self, consumptions, penalty_min):
+    def _apply_penalty(self, consumptions, penalty_min, plan_mins):
         assert penalty_min > 0 and consumptions.count() > 1
 
         # prioritize readable code over efficient code
@@ -140,7 +140,12 @@ class Bill(models.Model):
             # group by used minutes
             data[c.total_min].append(c)
 
-        import pdb; pdb.set_trace()
+        # need to add an extra key for the plan total, so when building
+        # the pairwise generator, the last total has an entry of its own
+        # Example: if we have consumptions to apply penalty to of
+        # 30, 50, 80 and the plan target is 100, we need the following pairs:
+        # [(30, 50), (50, 80), (80, 100)]
+        data[plan_mins].append(None)
 
         # sort ascending
         totals = pairwise(sorted(data.iterkeys()))
@@ -156,7 +161,6 @@ class Bill(models.Model):
             penalty_min -= to_apply
 
             to_apply = to_apply / len_cons
-            assert to_apply == penalty_min or to_apply == diff
             for c in cons:
                 c.penalty_min = c.penalty_min + to_apply
                 c.save()
@@ -181,14 +185,13 @@ class Bill(models.Model):
         if amount == 0:
             logging.warning('There is no consumption to apply the %s to.',
                             penalty)
-        #elif amount == 1:
-        #    c = consumptions.get()
-        #    assert c.total_min + penalty_min <= plan_mins
-        #    c.penalty_min = penalty_min
-        #    c.save()
-        #    return
+        elif amount == 1:
+            c = consumptions.get()
+            assert c.total_min + penalty_min <= plan_mins
+            c.penalty_min = penalty_min
+            c.save()
         else:
-            self._apply_penalty(consumptions, penalty_min)
+            self._apply_penalty(consumptions, penalty_min, plan_mins)
 
     @transaction.commit_on_success
     def parse_invoice(self):
@@ -366,9 +369,10 @@ class Consumption(models.Model):
     reported_total = MoneyField('Total ($)')
 
     # calculated *and* stored in the DB
-    total_min = MinuteField('Suma de minutos consumidos y excedentes')
     penalty_min = MinuteField('Multa de minutos')
     penalty_sms = SMSField('Multa de mensajes')
+    total_min = MinuteField('Suma de minutos consumidos y excedentes, '
+                            'y multas')
     total_before_taxes = MoneyField()
     taxes = TaxField()
     total_before_round = MoneyField()
@@ -391,9 +395,8 @@ class Consumption(models.Model):
         else:
             total = self.monthly_price
 
-        # XXX: missing: add non-consumed minutes if aplicable
-
-        self.total_min = self.included_min + self.exceeded_min
+        self.total_min = (self.included_min + self.exceeded_min +
+                          self.penalty_min)
         self.total_before_taxes = total
         self.taxes = self.bill.taxes
         self.total_before_round = (self.total_before_taxes *
@@ -419,4 +422,4 @@ class Penalty(models.Model):
 
     def __unicode__(self):
         return 'Penalty of %s minutes for %s (%s)' % (self.minutes, self.bill,
-                                                 self.plan)
+                                                      self.plan)
