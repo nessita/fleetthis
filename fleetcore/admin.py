@@ -91,7 +91,8 @@ class ConsumptionAdmin(admin.ModelAdmin):
             'fields': ('phone', 'bill',)
         }),
         ('Totals', {
-            'fields': ('total_before_taxes', 'taxes', 'total_before_round',
+            'fields': (('penalty_min', 'total_min'),
+                       'total_before_taxes', 'taxes', 'total_before_round',
                        ('total', 'payed'),)
         }),
         ('Data from provider', {
