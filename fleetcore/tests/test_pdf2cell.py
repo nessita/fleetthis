@@ -69,6 +69,8 @@ class ParsePDFTestCase(TestCase):
         for k in ('bill_date', 'bill_number', 'phone_data'):
             self.assertEqual(result[k], self.real_result[k])
 
+        self.assertEqual(result, self.real_result)
+
 
 class ParseNewPDFTestCase(ParsePDFTestCase):
     """The test suite for the parse_pdf method using the new PDF format."""

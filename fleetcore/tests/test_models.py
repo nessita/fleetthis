@@ -50,7 +50,9 @@ from fleetcore.tests.factory import Factory
 TEST_FILES_DIR = os.path.join(os.path.dirname(__file__), 'files')
 PDF_PARSED_SAMPLE = {
     'bill_date': datetime(2011, 10, 13),
+    'bill_debt': Decimal('123.45'),
     'bill_number': '123456abcd',
+    'bill_total': Decimal('1234.56'),
     'phone_data': [
         # PHONE_NUMBER, USER, PLAN,
         [1234567890, 'Foo, Bar', 'PLAN1',
@@ -124,6 +126,8 @@ class ParseInvoiceTestCase(BillTestCase):
         self.assertIsNone(bill.billing_date)
         self.assertIsNone(bill.parsing_date)
         self.assertEqual(bill.provider_number, '')
+        self.assertEqual(bill.billing_debt, Decimal('0'))
+        self.assertEqual(bill.billing_total, Decimal('0'))
 
     def test_empty_path(self):
         assert Consumption.objects.count() == 0
@@ -197,6 +201,8 @@ class ParseInvoiceTestCase(BillTestCase):
         # reload bill from db
         bill = Bill.objects.get(id=self.obj.id)
         self.assertEqual(bill.billing_date, date(2011, 10, 13))
+        self.assertEqual(bill.billing_total, Decimal('1234.56'))
+        self.assertEqual(bill.billing_debt, Decimal('123.45'))
         self.assertEqual(bill.parsing_date, now)
         self.assertEqual(bill.provider_number, '123456abcd')
 

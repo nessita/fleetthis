@@ -37,7 +37,9 @@ from pdfminer.pdfdevice import PDFDevice
 PHONE_TOKEN = '-'
 
 OLD_FORMAT = dict(
+    bill_debt_token='TOTAL A PAGAR$',
     bill_number_token='Factura Nro.',
+    bill_total_token='TOTAL A PAGAR$',
     date_token='Fecha de Factura',
     front_page=1,
     join_token='',
@@ -45,7 +47,9 @@ OLD_FORMAT = dict(
 )
 
 NEW_FORMAT = dict(
+    bill_debt_token='TOTAL A PAGAR: $',
     bill_number_token='Factura Nro.: ',
+    bill_total_token='TOTAL FACTURA: $',
     date_token='Fecha de Factura: ',
     front_page=2,
     join_token=' ',
@@ -60,6 +64,7 @@ class CellularConverter(PDFPageAggregator):
 
     formats = dict(new=NEW_FORMAT, old=OLD_FORMAT)
     bill_number_length = 13
+    bill_total_length = bill_debt_length = 8
     date_length = 10
     notes_length = 30
     plan_length = 6
@@ -69,6 +74,8 @@ class CellularConverter(PDFPageAggregator):
         self.bill_format = self.formats[format]
         self._bill_date = None
         self._bill_number = None
+        self._bill_total = None
+        self._bill_debt = None
         self._data = []
         # Create a PDF parser object associated with the file object.
         parser = PDFParser(input_fd)
@@ -123,17 +130,41 @@ class CellularConverter(PDFPageAggregator):
                 if line:
                     fn(line)
 
+    def _process_bill_token(self, line, token, token_length):
+        idx = line.find(token)
+        data = None
+        if idx != -1:
+            idx += len(token)
+            data = line[idx:idx + token_length]
+        return data
+
     def _process_front_page(self, line):
-        idx = line.find(self.bill_format['date_token'])
-        if idx != -1 and self._bill_date is None:
-            idx += len(self.bill_format['date_token'])
-            bill_date_str = line[idx:idx + self.date_length]
+        bill_date_str = self._process_bill_token(
+            line, self.bill_format['date_token'], self.date_length
+        )
+        if bill_date_str and not self._bill_date:
             self._bill_date = datetime.strptime(bill_date_str, "%d/%m/%Y")
 
-        idx = line.find(self.bill_format['bill_number_token'])
-        if idx != -1 and self._bill_number is None:
-            idx += len(self.bill_format['bill_number_token'])
-            self._bill_number = line[idx:idx + self.bill_number_length]
+        bill_number = self._process_bill_token(
+            line, self.bill_format['bill_number_token'],
+            self.bill_number_length,
+        )
+        if bill_number and not self._bill_number:
+            self._bill_number = bill_number
+
+        bill_total = self._process_bill_token(
+            line, self.bill_format['bill_total_token'],
+            self.bill_total_length,
+        )
+        if bill_total and not self._bill_total:
+            self._bill_total = Decimal(bill_total.replace('.', '').replace(',', '.'))
+
+        bill_debt = self._process_bill_token(
+            line, self.bill_format['bill_debt_token'],
+            self.bill_debt_length,
+        )
+        if bill_debt and not self._bill_debt:
+            self._bill_debt = Decimal(bill_debt.replace('.', '').replace(',', '.'))
 
     def gather_phone_info(self):
         interpreter = PDFPageInterpreter(self.rsrcmgr, self)
@@ -146,8 +177,12 @@ class CellularConverter(PDFPageAggregator):
             elif layout.pageid == self.bill_format['table_page']:
                 self._extract_text(layout, self._process_phone_row)
 
-        return {'bill_date': self._bill_date, 'bill_number': self._bill_number,
-                'phone_data': self._data}
+        result = {
+            'bill_date': self._bill_date, 'bill_number': self._bill_number,
+            'bill_total': self._bill_total, 'bill_debt': self._bill_debt,
+            'phone_data': self._data,
+        }
+        return result
 
 
 def parse_file(fname, format='new'):

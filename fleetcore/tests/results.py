@@ -9,7 +9,9 @@ from decimal import Decimal
 
 PDF_PARSE_RESULT = {
     'bill_date': datetime(2012, 7, 26),
+    'bill_debt': Decimal('868.86'),
     'bill_number': '0588-50542628',
+    'bill_total': Decimal('868.86'),
     'phone_data': [
         [1166936420, 'L, J', 'TSC16', Decimal('35.00'), Decimal('45.00'),
          Decimal('0.00'), Decimal('103.00'), Decimal('0.00'), Decimal('0.00'),
@@ -128,7 +130,9 @@ PDF_PARSE_RESULT = {
 
 PDF_PARSE_NEW_RESULT = {
     'bill_date': datetime(2012, 9, 26),
+    'bill_debt': Decimal('1871.22'),
     'bill_number': '0588-01407943',
+    'bill_total': Decimal('1871.22'),
     'phone_data': [
         [1166936420, 'L, J', 'TCL16',
          Decimal('35.00'), Decimal('45.00'), Decimal('0.00'),

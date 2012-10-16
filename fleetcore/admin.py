@@ -20,6 +20,7 @@ from fleetcore.models import (
     Bill,
     Consumption,
     Fleet,
+    Penalty,
     Phone,
     Plan,
 )
@@ -54,7 +55,7 @@ class BillAdmin(admin.ModelAdmin):
             return HttpResponseRedirect('..')
 
         try:
-            bill.make_adjustments()
+            bill.calculate_penalties()
         except Bill.AdjustmentError as e:
             messages.error(request, error_msg + unicode(e))
             return HttpResponseRedirect('..')
@@ -68,22 +69,27 @@ class BillAdmin(admin.ModelAdmin):
         bill = get_object_or_404(self.queryset(request), pk=bill_id)
         template = 'admin/fleetcore/bill/show_details.html'
         # group consumptions per leader
-        leaders = {}
+        data = {}
         grand_total = 0
-        for u in UserProfile.objects.filter(leader=request.user).values_list('user', flat=True):
+        leaders = UserProfile.objects.filter(leader=request.user)
+        for leader in leaders:
+            u = leader.user
             users = list(UserProfile.objects.filter(leader=u)) + [u]
             consumptions = bill.consumption_set.filter(phone__user__in=users)
-            total = consumptions.aggregate(total=Sum('total'))['total']
-            leaders[u] = {
-                'consumptions': consumptions,
-                'total': total,
-            }
-            #grand_total += total
+            if consumptions:
+                total = consumptions.aggregate(total=Sum('total'))['total']
+                data[u] = {
+                    'consumptions': consumptions,
+                    'total': total,
+                }
+                grand_total += total
 
         context = {
             'bill': bill,
-            'leaders': leaders,
+            'leaders': data,
             'grand_total': grand_total,
+            'outcome': grand_total - bill.billing_debt,
+            'penalties': Penalty.objects.filter(bill=bill),
         }
         return TemplateResponse(request, template, context=context)
 

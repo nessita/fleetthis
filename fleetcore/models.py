@@ -105,6 +105,8 @@ class Bill(models.Model):
     fleet = models.ForeignKey(Fleet)
     invoice = models.FileField(upload_to='invoices')
     billing_date = models.DateField(null=True, blank=True)
+    billing_total = MoneyField()
+    billing_debt = MoneyField()
     parsing_date = models.DateTimeField(null=True, blank=True)
     upload_date = models.DateTimeField(default=datetime.now)
     provider_number = models.CharField(max_length=50, blank=True)
@@ -243,6 +245,8 @@ class Bill(models.Model):
         bill_date = data.get('bill_date')
         if bill_date:
             self.billing_date = bill_date
+        self.billing_debt = data.get('bill_debt', Decimal('0'))
+        self.billing_total = data.get('bill_total', Decimal('0'))
         self.parsing_date = datetime.now()
         self.provider_number = data.get('bill_number', '')
         self.save()
@@ -273,9 +277,6 @@ class Bill(models.Model):
                 penalty = Penalty.objects.create(bill=self, plan=plan,
                                                  minutes=target - real)
                 self.apply_penalty(consumptions, penalty)
-
-    def make_adjustments(self):
-        """Make all the required adjustment to Consumptions."""
 
     def notify_users(self):
         """Notify users about this bill."""
