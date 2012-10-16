@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 from django import forms
+from django.db.models import Sum
 from django.conf.urls import patterns, url
 from django.contrib import admin, messages
 from django.contrib.auth.admin import GroupAdmin, UserAdmin
@@ -60,10 +61,31 @@ class BillAdmin(admin.ModelAdmin):
 
         msg = _('Invoice processed successfully.')
         messages.success(request, msg)
-        return HttpResponseRedirect(reverse('show_details', arg=bill_id))
+        return HttpResponseRedirect(reverse('admin:show-details',
+                                            kwargs=dict(bill_id=bill_id)))
 
     def show_details(self, request, bill_id):
-        return TemplateResponse(request, 'admin/bill/show_details.html')
+        bill = get_object_or_404(self.queryset(request), pk=bill_id)
+        template = 'admin/fleetcore/bill/show_details.html'
+        # group consumptions per leader
+        leaders = {}
+        grand_total = 0
+        for u in UserProfile.objects.filter(leader=request.user).values_list('user', flat=True):
+            users = list(UserProfile.objects.filter(leader=u)) + [u]
+            consumptions = bill.consumption_set.filter(phone__user__in=users)
+            total = consumptions.aggregate(total=Sum('total'))['total']
+            leaders[u] = {
+                'consumptions': consumptions,
+                'total': total,
+            }
+            #grand_total += total
+
+        context = {
+            'bill': bill,
+            'leaders': leaders,
+            'grand_total': grand_total,
+        }
+        return TemplateResponse(request, template, context=context)
 
     def notify_users(self, request, bill_id):
         bill = get_object_or_404(self.queryset(request), pk=bill_id)

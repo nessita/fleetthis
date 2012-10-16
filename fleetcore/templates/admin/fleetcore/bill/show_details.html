@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<p>Consumptions for: {{ bill }}</p>
+
+{% for leader, data in leaders.items %}
+<div class="leader-info">
+  <p>Consumptions for {{ leader.get_full_name }}
+  <table>
+  <tr>
+    <th>Phone</th> <th>User</th> <th>Total</th>
+  </tr>
+  {% for c in data.consumptions %}
+  <tr>
+    <td>{{ c.phone.number }}</td> <td>{{ c.phone.user.get_full_name }}</td>
+    <td>$ {{ c.total|floatformat:0 }}</td>
+  </tr>
+  {% endfor %}
+  <tr>
+    <td> </td> <td> </td> Total <td>$ {{ data.total|floatformat:0 }}</td>
+  </tr>
+  </table>
+  </p>
+</div>
+{% endfor %}
+
+<p>Grand total: {{ grand_total }}</p>
+
+{% endblock %}
