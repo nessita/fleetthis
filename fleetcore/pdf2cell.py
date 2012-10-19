@@ -157,14 +157,16 @@ class CellularConverter(PDFPageAggregator):
             self.bill_total_length,
         )
         if bill_total and not self._bill_total:
-            self._bill_total = Decimal(bill_total.replace('.', '').replace(',', '.'))
+            self._bill_total = Decimal(
+                bill_total.replace('.', '').replace(',', '.'))
 
         bill_debt = self._process_bill_token(
             line, self.bill_format['bill_debt_token'],
             self.bill_debt_length,
         )
         if bill_debt and not self._bill_debt:
-            self._bill_debt = Decimal(bill_debt.replace('.', '').replace(',', '.'))
+            self._bill_debt = Decimal(
+                bill_debt.replace('.', '').replace(',', '.'))
 
     def gather_phone_info(self):
         interpreter = PDFPageInterpreter(self.rsrcmgr, self)

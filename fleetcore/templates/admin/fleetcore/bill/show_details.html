@@ -4,14 +4,17 @@
 {% block content %}
 <h1>Consumptions for: {{ bill }}</h1>
 
-<div class="global-info" style="float: left;">
+<div class="float-left">
   <table>
+  <thead>
   <tr>
-    <th colspan="2" style="background: grey;">The potato</th>
+    <th colspan="2">The potato</th>
   </tr>
+  </thead>
+  <tbody>
   {% for penalty in penalties %}
   <tr>
-    <td>Penalty for plan {{ penalty.plan.name }}</td>
+    <td>Penalty for plan {{ penalty.plan.name }}:</td>
     <td align="right">{{ penalty.minutes }} </td>
   </tr>
   {% endfor %}
@@ -21,46 +24,54 @@
   </tr>
   {% endif %}
   <tr>
-    <td>Grand total:</td><td align="right">${{ grand_total|floatformat:2 }} </td>
-  </tr>
-  <tr>
     <td>Bill debt:</td><td align="right">${{ bill.billing_debt|floatformat:2 }} </td>
   </tr>
   <tr>
-    <td></td>
-    <td align="right">
-    {% if outcome < 0 %}
+    <td>Grand total:</td><td align="right">${{ bill.consumptions_total|floatformat:2 }} </td>
+  </tr>
+  </tbody>
+  <tfoot>
+  <tr>
+    <td colspan="2" align="right">
+    {% if bill.outcome < 0 %}
     <span style="color: red;">
     {% else %}
     <span style="color: green;">
     {% endif %}
-    ${{ outcome|floatformat:2 }}
+    ${{ bill.outcome|floatformat:2 }}
     </span>
     </td>
   </tr>
+  </tfoot>
   </table>
 </div>
 
-<div class="leader-info" style="float: right;">
-{% for leader, data in leaders.items %}
-  <table border="1">
+<div class="float-right">
+{% for leader, data in bill.details.items %}
+  <table>
+  <thead>
   <tr>
     <th colspan="3">Consumptions for {{ leader.get_full_name }}</th>
   </tr>
   <tr>
     <th>Phone</th> <th>User</th> <th>Total</th>
   </tr>
+  </thead>
+  <tbody>
   {% for c in data.consumptions %}
-  <tr>
+  <tr class="{% cycle "row1" "row2" %}">
     <td><a href="/admin/fleetcore/consumption/{{ c.id }}">{{ c.phone.number }}</a></td>
     <td>{{ c.phone.user.get_full_name }}</td>
     <td>$ {{ c.total|floatformat:0 }}</td>
   </tr>
   {% endfor %}
+  </tbody>
+  <tfoot>
   <tr>
     <td colspan="2" align="right"> Total for {{leader.get_full_name}} </td>
     <td>$ {{ data.total|floatformat:0 }}</td>
   </tr>
+  </tfoot>
   </table>
   </p>
 {% endfor %}

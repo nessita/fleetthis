@@ -31,8 +31,8 @@ class BillAdminTestCase(TestCase):
         self.parse_invoice_mock = patcher.start()
         self.addCleanup(patcher.stop)
 
-        patcher = patch.object(self.bill, 'make_adjustments')
-        self.make_adjustments_mock = patcher.start()
+        patcher = patch.object(self.bill, 'calculate_penalties')
+        self.calculate_penalties_mock = patcher.start()
         self.addCleanup(patcher.stop)
 
         self.admin_user = self.factory.make_admin_user(password='admin')
@@ -64,7 +64,7 @@ class BillAdminTestCase(TestCase):
         # response is a redirect to '..' with error message 'foo'
 
     def test_process_invoice_with_adjustment_error(self):
-        self.bill.make_adjustments = Mock()
-        self.bill.make_adjustments.side_effect = Bill.AdjustmentError('foo')
+        self.bill.calculate_penalties = Mock()
+        self.bill.calculate_penalties.side_effect = Bill.AdjustmentError('foo')
         response = self.client.get(self.process_invoice_url)
         # response is a redirect to '..' with error message 'foo'

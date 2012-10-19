@@ -1,5 +1,6 @@
 {% extends "admin/change_form.html" %}
 {% load i18n %}
+
 {% block object-tools-items %}
     {% if not original.parsing_date %}
     <li><a href="process-invoice/" class="link">{% trans "Process Invoice" %}</a></li>
@@ -8,4 +9,35 @@
     <li><a href="notify-users/" class="link">{% trans "Notify Users" %}</a></li>
     {% endif %}
     {{ block.super }}
+{% endblock %}
+
+{% block after_field_sets %}
+{% if original %}
+<div>
+{% for leader, data in original.details.items %}
+  <fieldset class="module aligned">
+  <h2>
+    Consumptions for {{ leader.get_full_name }} - Total $ {{ data.total|floatformat:0 }}
+  </h2>
+
+  <table>
+  <tbody>
+  {% for c in data.consumptions %}
+  <tr class="{% cycle "row1" "row2" %}">
+    <td><a href="/admin/fleetcore/consumption/{{ c.id }}">{{ c.phone.number }}</a></td>
+    <td>{{ c.phone.plan.name }}</td>
+    <td>{{ c.phone.user.get_full_name }}</td>
+    <td>$ {{ c.total|floatformat:0 }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+  </table>
+
+  </fieldset>
+{% endfor %}
+</div>
+
+<div style="clear: both"></div>
+{% endif %}
+
 {% endblock %}

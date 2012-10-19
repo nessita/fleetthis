@@ -38,6 +38,7 @@ from fleetcore.pdf2cell import (
     TOTAL_PRICE,
     USER,
 )
+from fleetusers.models import UserProfile
 
 
 def pairwise(iterable):
@@ -112,7 +113,7 @@ class Bill(models.Model):
     provider_number = models.CharField(max_length=50, blank=True)
     internal_tax = TaxField(default=Decimal('0.0417'))
     iva_tax = TaxField(default=Decimal('0.27'))
-    other_tax = TaxField(default=Decimal('0.01'))
+    other_tax = TaxField(default=Decimal('0.04'))
 
     created = models.DateField(auto_now_add=True)
     last_modified = models.DateField(auto_now=True)
@@ -129,6 +130,36 @@ class Bill(models.Model):
     @property
     def taxes(self):
         return self.internal_tax + self.iva_tax + self.other_tax
+
+    @property
+    def consumptions_total(self):
+        return self.consumption_set.aggregate(total=Sum('total'))['total']
+
+    @property
+    def outcome(self):
+        return self.consumptions_total - self.billing_debt
+
+    @property
+    def details(self, user=None):
+        if user is None:
+            user = User.objects.get(is_superuser=True)
+
+        # group consumptions per leader
+        data = {}
+        leaders = UserProfile.objects.filter(leader=user)
+        for leader in leaders:
+            u = leader.user
+            users = list(UserProfile.objects.filter(leader=u)) + [u]
+            consumptions = self.consumption_set.filter(phone__user__in=users)
+            if consumptions:
+                total = consumptions.aggregate(total=Sum('total'))['total']
+                data[u] = {
+                    'consumptions': consumptions,
+                    'total': total,
+                }
+
+        return data
+
 
     def __unicode__(self):
         return 'Bill "%s" (date: %s)' % (self.fleet, self.billing_date)
@@ -388,16 +419,17 @@ class Consumption(models.Model):
                                                  self.phone)
 
     def save(self, *args, **kwargs):
+        self.total_min = (self.included_min + self.exceeded_min +
+                          self.penalty_min)
+
         total = self.reported_total
         plan = self.phone.plan
         if plan.with_min_clearing:
             total -= self.monthly_price
-            total += plan.included_min * plan.price_min
+            total += self.total_min * plan.price_min
         else:
             total = self.monthly_price
 
-        self.total_min = (self.included_min + self.exceeded_min +
-                          self.penalty_min)
         self.total_before_taxes = total
         self.taxes = self.bill.taxes
         self.total_before_round = (self.total_before_taxes *

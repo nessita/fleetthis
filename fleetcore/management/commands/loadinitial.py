@@ -35,7 +35,7 @@ Min. destino a móviles del cliente: $ 0.00 $ 0.00
 Min. destino a móviles: $0.27 $ 0.27
 Los SMS no están incluídos en el abono, cada uno sale $ 0.24.
 """),
-    ('TCL16', Decimal('35.00'), 130, Decimal('0.27'), 0, Decimal('0.24'),
+    ('TCL16', Decimal('35.00'), 129, Decimal('0.27'), 0, Decimal('0.24'),
      """DETALLE PLAN DE PRECIO: PLAN TCL16 - Abono: $ 35.00 Pesos
 Libres en el Plan:$ 35.00
 Precios sin imp ni cargo ENARD Ley 26573

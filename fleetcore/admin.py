@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 from django import forms
-from django.db.models import Sum
 from django.conf.urls import patterns, url
 from django.contrib import admin, messages
 from django.contrib.auth.admin import GroupAdmin, UserAdmin
@@ -26,7 +25,16 @@ from fleetcore.models import (
 )
 
 
+class PenaltyAdmin(admin.StackedInline):
+    fieldsets = ((None, {'fields': ('plan', 'minutes', 'sms')}),)
+    model = Penalty
+    extra = 0
+
+
 class BillAdmin(admin.ModelAdmin):
+
+    inlines = (PenaltyAdmin,)
+    readonly_fields = ('taxes', 'consumptions_total', 'outcome')
 
     def get_urls(self):
         urls = super(BillAdmin, self).get_urls()
@@ -45,17 +53,17 @@ class BillAdmin(admin.ModelAdmin):
         return my_urls + urls
 
     def process_invoice(self, request, bill_id):
-        bill = get_object_or_404(self.queryset(request), pk=bill_id)
+        obj = get_object_or_404(self.queryset(request), pk=bill_id)
         error_msg = _('Invoice processed unsuccessfully. Error: ')
 
         try:
-            bill.parse_invoice()
+            obj.parse_invoice()
         except Bill.ParseError as e:
             messages.error(request, error_msg + unicode(e))
             return HttpResponseRedirect('..')
 
         try:
-            bill.calculate_penalties()
+            obj.calculate_penalties()
         except Bill.AdjustmentError as e:
             messages.error(request, error_msg + unicode(e))
             return HttpResponseRedirect('..')
@@ -66,37 +74,21 @@ class BillAdmin(admin.ModelAdmin):
                                             kwargs=dict(bill_id=bill_id)))
 
     def show_details(self, request, bill_id):
-        bill = get_object_or_404(self.queryset(request), pk=bill_id)
-        template = 'admin/fleetcore/bill/show_details.html'
-        # group consumptions per leader
-        data = {}
-        grand_total = 0
-        leaders = UserProfile.objects.filter(leader=request.user)
-        for leader in leaders:
-            u = leader.user
-            users = list(UserProfile.objects.filter(leader=u)) + [u]
-            consumptions = bill.consumption_set.filter(phone__user__in=users)
-            if consumptions:
-                total = consumptions.aggregate(total=Sum('total'))['total']
-                data[u] = {
-                    'consumptions': consumptions,
-                    'total': total,
-                }
-                grand_total += total
-
+        obj = get_object_or_404(self.queryset(request), pk=bill_id)
         context = {
-            'bill': bill,
-            'leaders': data,
-            'grand_total': grand_total,
-            'outcome': grand_total - bill.billing_debt,
-            'penalties': Penalty.objects.filter(bill=bill),
+            'bill': obj,
+            'leaders': obj.details,
+            'grand_total': obj.consumptions_total,
+            'outcome': obj.outcome,
+            'penalties': Penalty.objects.filter(bill=obj),
         }
+        template = 'admin/fleetcore/bill/show_details.html'
         return TemplateResponse(request, template, context=context)
 
     def notify_users(self, request, bill_id):
-        bill = get_object_or_404(self.queryset(request), pk=bill_id)
+        obj = get_object_or_404(self.queryset(request), pk=bill_id)
         try:
-            bill.notify_users()
+            obj.notify_users()
         except Bill.NotifyError as e:
             msg = _('Notification error.')
             msg += ' Error: %s' % unicode(e)
