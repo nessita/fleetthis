@@ -5,7 +5,6 @@
     {% if not original.parsing_date %}
     <li><a href="process-invoice/" class="link">{% trans "Process Invoice" %}</a></li>
     {% else %}
-    <li><a href="show-details/" class="link">{% trans "Show details" %}</a></li>
     <li><a href="notify-users/" class="link">{% trans "Notify Users" %}</a></li>
     {% endif %}
     {{ block.super }}

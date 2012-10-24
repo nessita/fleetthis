@@ -38,8 +38,8 @@ from fleetcore.pdf2cell import (
     TOTAL_PRICE,
     USER,
 )
+from fleetcore.sendbills import BillSummarySender
 from fleetusers.models import UserProfile
-
 
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
@@ -52,6 +52,16 @@ def validate_tax(value):
     """Tax value must be a number in the [0, 1) interval."""
     if not (Decimal('0') <= value and value < Decimal('1')):
         raise ValidationError('%r should be in the interval [0, 1)' % value)
+
+
+class LeaderTriangle(object):
+
+    def __init__(self, leader):
+        u = leader.user
+        users = list(UserProfile.objects.filter(leader=u)) + [u]
+        self.consumptions = self.consumption_set.filter(phone__user__in=users)
+        if consumptions:
+            self.total = consumptions.aggregate(total=Sum('total'))['total']
 
 
 class MoneyField(models.DecimalField):
@@ -159,7 +169,6 @@ class Bill(models.Model):
                 }
 
         return data
-
 
     def __unicode__(self):
         return 'Bill "%s" (date: %s)' % (self.fleet, self.billing_date)
@@ -311,6 +320,8 @@ class Bill(models.Model):
 
     def notify_users(self):
         """Notify users about this bill."""
+        sender = BillSummarySender(billd=self)
+        sender.send_mails()
 
 
 class Plan(models.Model):
@@ -327,12 +338,7 @@ class Plan(models.Model):
     with_sms_clearing = models.BooleanField(default=False)
 
     def __unicode__(self):
-        min_clearing = (('with' if self.with_min_clearing else 'no') +
-                        ' clearing for minutes')
-        sms_clearing = (('with' if self.with_sms_clearing else 'no') +
-                        ' clearing for sms')
-        return '%s - $%s (%s, %s)' % (self.name, self.price,
-                                      min_clearing, sms_clearing)
+        return '%s - $%s' % (self.name, self.price)
 
 
 class DataPack(models.Model):

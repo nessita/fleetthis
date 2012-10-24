@@ -26,7 +26,9 @@ from fleetcore.models import (
 
 
 class PenaltyAdmin(admin.StackedInline):
-    fieldsets = ((None, {'fields': ('plan', 'minutes', 'sms')}),)
+    fieldsets = (
+        (None, {'fields': (('plan', 'minutes', 'sms'),)}),
+    )
     model = Penalty
     extra = 0
 
@@ -34,7 +36,29 @@ class PenaltyAdmin(admin.StackedInline):
 class BillAdmin(admin.ModelAdmin):
 
     inlines = (PenaltyAdmin,)
-    readonly_fields = ('taxes', 'consumptions_total', 'outcome')
+    readonly_fields = (
+        'taxes', 'consumptions_total', 'outcome',
+    )
+    fieldsets = (
+        (None, {
+            'fields': (
+                ('fleet', 'invoice'),
+                ('parsing_date', 'upload_date'),
+            )
+        }),
+        ('Data from provider', {
+            'fields': (
+                ('provider_number', 'billing_date'),
+                ('billing_total', 'billing_debt'),
+            )
+        }),
+        ('Taxes', {
+            'fields': (
+                ('internal_tax', 'iva_tax', 'other_tax'),
+                ('taxes', 'consumptions_total', 'outcome'),
+            )
+        }),
+    )
 
     def get_urls(self):
         urls = super(BillAdmin, self).get_urls()
@@ -43,9 +67,6 @@ class BillAdmin(admin.ModelAdmin):
             url(r'^(?P<bill_id>\d+)/process-invoice/$',
                 self.admin_site.admin_view(self.process_invoice),
                 name='process-invoice'),
-            url(r'^(?P<bill_id>\d+)/show-details/$',
-                self.admin_site.admin_view(self.show_details),
-                name='show-details'),
             url(r'^(?P<bill_id>\d+)/notify-users/$',
                 self.admin_site.admin_view(self.notify_users),
                 name='notify-users'),
@@ -60,30 +81,16 @@ class BillAdmin(admin.ModelAdmin):
             obj.parse_invoice()
         except Bill.ParseError as e:
             messages.error(request, error_msg + unicode(e))
-            return HttpResponseRedirect('..')
 
         try:
             obj.calculate_penalties()
         except Bill.AdjustmentError as e:
             messages.error(request, error_msg + unicode(e))
-            return HttpResponseRedirect('..')
+        else:
+            msg = _('Invoice processed successfully.')
+            messages.success(request, msg)
 
-        msg = _('Invoice processed successfully.')
-        messages.success(request, msg)
-        return HttpResponseRedirect(reverse('admin:show-details',
-                                            kwargs=dict(bill_id=bill_id)))
-
-    def show_details(self, request, bill_id):
-        obj = get_object_or_404(self.queryset(request), pk=bill_id)
-        context = {
-            'bill': obj,
-            'leaders': obj.details,
-            'grand_total': obj.consumptions_total,
-            'outcome': obj.outcome,
-            'penalties': Penalty.objects.filter(bill=obj),
-        }
-        template = 'admin/fleetcore/bill/show_details.html'
-        return TemplateResponse(request, template, context=context)
+        return HttpResponseRedirect('..')
 
     def notify_users(self, request, bill_id):
         obj = get_object_or_404(self.queryset(request), pk=bill_id)
@@ -118,8 +125,10 @@ class ConsumptionAdmin(admin.ModelAdmin):
         ('Data from provider', {
             'classes': ('collapse',),
             'fields': (
-                'reported_user', 'reported_plan', 'monthly_price',
-                ('services', 'refunds'), 'included_min',
+                'reported_user',
+                ('reported_plan', 'monthly_price'),
+                'included_min',
+                ('services', 'refunds'),
                 ('exceeded_min', 'exceeded_min_price'),
                 ('ndl_min', 'ndl_min_price'),
                 ('idl_min', 'idl_min_price'), ('sms', 'sms_price'),
