@@ -23,6 +23,7 @@ from fleetcore.models import (
     Phone,
     Plan,
 )
+from fleetcore.sendbills import BillSummarySender
 
 
 class PenaltyAdmin(admin.StackedInline):
@@ -94,18 +95,22 @@ class BillAdmin(admin.ModelAdmin):
 
     def notify_users(self, request, bill_id):
         obj = get_object_or_404(self.queryset(request), pk=bill_id)
-        try:
-            obj.notify_users()
-        except Bill.NotifyError as e:
-            msg = _('Notification error.')
-            msg += ' Error: %s' % unicode(e)
-            messages.error(request, msg)
-        else:
-            msg = _('Notifications sent successfully.')
-            messages.success(request, msg)
 
-        response = HttpResponseRedirect('..')
-        return response
+        if request.POST:
+            try:
+                sender = BillSummarySender(bill=obj)
+                sender.send_reports()
+            except Exception as e:
+                msg = _('Notification error.')
+                msg += ' Error: %s' % unicode(e)
+                messages.error(request, msg)
+            else:
+                msg = _('Notifications sent successfully.')
+                messages.success(request, msg)
+
+            return HttpResponseRedirect('..')
+
+        return TemplateResponse(request, 'report.txt')
 
 
 class ConsumptionAdmin(admin.ModelAdmin):

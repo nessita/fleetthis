@@ -38,8 +38,8 @@ from fleetcore.pdf2cell import (
     TOTAL_PRICE,
     USER,
 )
-from fleetcore.sendbills import BillSummarySender
 from fleetusers.models import UserProfile
+
 
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
@@ -317,11 +317,6 @@ class Bill(models.Model):
                 penalty = Penalty.objects.create(bill=self, plan=plan,
                                                  minutes=target - real)
                 self.apply_penalty(consumptions, penalty)
-
-    def notify_users(self):
-        """Notify users about this bill."""
-        sender = BillSummarySender(billd=self)
-        sender.send_mails()
 
 
 class Plan(models.Model):
