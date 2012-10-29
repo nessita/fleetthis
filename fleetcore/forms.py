@@ -7,5 +7,5 @@ from django import forms
 
 
 class ReportForm(forms.Form):
-    body = forms.TextField()
-    subject = forms.TextField()
+    body = forms.CharField()
+    subject = forms.CharField()

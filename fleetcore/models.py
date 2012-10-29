@@ -110,11 +110,21 @@ class Fleet(models.Model):
     def __unicode__(self):
         return '%s - %s' % (self.provider, self.account_number)
 
-
 class Bill(models.Model):
     """Monthly bill for a fleet."""
+
+    NEW_FORMAT = 'new'
+    OLD_FORMAT = 'old'
+    BILL_FORMAT_CHOICES = (
+        (NEW_FORMAT, 'New'),
+        (OLD_FORMAT, 'Old'),
+    )
+
     fleet = models.ForeignKey(Fleet)
     invoice = models.FileField(upload_to='invoices')
+    invoice_format = models.CharField(max_length=3,
+                                      choices=BILL_FORMAT_CHOICES,
+                                      default=NEW_FORMAT)
     billing_date = models.DateField(null=True, blank=True)
     billing_total = MoneyField()
     billing_debt = MoneyField()
@@ -254,7 +264,7 @@ class Bill(models.Model):
         if not os.path.exists(fname):
             raise Bill.ParseError('Invoice path does not exist.')
 
-        data = pdf2cell.parse_file(fname)
+        data = pdf2cell.parse_file(fname, format=self.invoice_format)
         for d in data.get('phone_data', []):
             try:
                 phone = Phone.objects.get(number=d[PHONE_NUMBER])

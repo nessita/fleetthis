@@ -96,10 +96,11 @@ class BillAdmin(admin.ModelAdmin):
     def notify_users(self, request, bill_id):
         obj = get_object_or_404(self.queryset(request), pk=bill_id)
 
+        sender = BillSummarySender(bill=obj)
+
         if request.POST:
             try:
-                sender = BillSummarySender(bill=obj)
-                sender.send_reports()
+                sender.send_reports(dry_run=False)
             except Exception as e:
                 msg = _('Notification error.')
                 msg += ' Error: %s' % unicode(e)
@@ -110,7 +111,9 @@ class BillAdmin(admin.ModelAdmin):
 
             return HttpResponseRedirect('..')
 
-        return TemplateResponse(request, 'report.txt')
+        emails = sender.send_reports(dry_run=True)
+        return TemplateResponse(request, 'admin/notify_users.html',
+                                dict(emails=emails))
 
 
 class ConsumptionAdmin(admin.ModelAdmin):

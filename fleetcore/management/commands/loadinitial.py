@@ -76,6 +76,7 @@ PHONES = {
 
     (3513901899, 'Natalia', 'Bidart', 'nataliabidart@gmail.com'): [
         (3512362650, 'Matías', 'Bordese', 'mbordese@gmail.com'),
+        (3516625555, 'Marcos', 'Dione', ''),
     ],
 
     (3516656711, 'Nelson', 'Bordese', 'nelsonbordese@gmail.com'): [
@@ -88,13 +89,21 @@ PHONES = {
         (3513290204, 'Aldo', 'Alini', 'aldoalini@gmail.com'),
         (3513290207, 'Marianela', 'Terragni', 'marianelaterragni@hotmail.com'),
         (3516624678, 'Adriana', 'Spiazzi', 'adrianaspiazzi@yahoo.com.ar'),
+        (1133471500, 'Adriana', 'Spiazzi', 'adrianaspiazzi@yahoo.com.ar'),
         (3516624706, 'Franco', 'Alini', 'francoalini@gmail.com'),
         (3516847977, 'Mirta', 'Arnoletti', ''),
         (3516847979, 'Andrea', 'Spiazzi', ''),
     ],
-    (3875346390, 'Douwe', '', 'douwe@example.com'): [
+    (3875346390, 'Douwe', '', ''): [
+        (3875346390, 'Douwe', '', ''),
     ],
 }
+
+FLEETS = (
+    (231842055, 'johnlenton@gmail.com'),
+    (613912138, 'nataliabidart@gmail.com'),
+    (725615496, 'fleetthis@gmail.com'),
+)
 
 
 class Command(BaseCommand):
@@ -109,11 +118,6 @@ class Command(BaseCommand):
         admin_pwd = settings.ADMIN_PASSWORD
         admin = User.objects.create_superuser(
             username='admin', email=admin_email, password=admin_pwd)
-
-        the_fleet = Fleet.objects.create(
-            user=admin, account_number=725615496,
-            email='fleetthis@gmail.com', provider='Claro',
-        )
 
         for kbs, price in DATA_PACKS:
             DataPack.objects.create(kbs=kbs, price=price)
@@ -149,5 +153,11 @@ class Command(BaseCommand):
             leader = create_phone(first_name, last_name, n, email)
             for n, fn, ln, e in phones:
                 create_phone(fn, ln, n, email=e, leader=leader)
+
+        for account, email in FLEETS:
+            fleet = Fleet.objects.create(
+                user=admin, account_number=account,
+                email=email, provider='Claro',
+            )
 
         self.stdout.write('Successfully loaded initial data.\n')

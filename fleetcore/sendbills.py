@@ -18,12 +18,21 @@ class BillSummarySender(object):
         self.bill = bill
 
     def send_reports(self, dry_run=True):
+        result = []
         for leader, data in self.bill.details.iteritems():
             body = render_to_string('report.txt',
                                     {'data': data, 'leader': leader})
             subject = SUBJECT % self.bill.billing_date.strftime('%B')
-            to_list = [leader.email]
-            to_list.append(settings.ADMIN_EMAIL)
+            from_email = settings.ADMIN_EMAIL
+            to_list = [leader.email, from_email]
 
-            send_mail(subject, body, settings.ADMIN_EMAIL, to_list,
-                      fail_silently=False)
+            kwargs = dict(
+                subject=subject, message=body, from_email=from_email,
+                recipient_list=to_list, fail_silently=False,
+            )
+            if dry_run:
+                result.append(kwargs)
+            else:
+                send_mail(**kwargs)
+
+        return result
