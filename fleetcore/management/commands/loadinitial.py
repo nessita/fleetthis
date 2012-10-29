@@ -85,17 +85,17 @@ PHONES = {
     ],
 
     (3513901750, 'Walter', 'Alini', 'walteralini@gmail.com'): [
-        (3513290201, 'Adrián', 'Alini', ''),
+        (3513290201, 'Adrián', 'Alini', 'alini.adrian@gmail.com'),
         (3513290204, 'Aldo', 'Alini', 'aldoalini@gmail.com'),
         (3513290207, 'Marianela', 'Terragni', 'marianelaterragni@hotmail.com'),
         (3516624678, 'Adriana', 'Spiazzi', 'adrianaspiazzi@yahoo.com.ar'),
         (1133471500, 'Adriana', 'Spiazzi', 'adrianaspiazzi@yahoo.com.ar'),
         (3516624706, 'Franco', 'Alini', 'francoalini@gmail.com'),
-        (3516847977, 'Mirta', 'Arnoletti', ''),
-        (3516847979, 'Andrea', 'Spiazzi', ''),
+        (3516847977, 'Mirta', 'Arnoletti', 'aldoalini@gmail.com'),
+        (3516847979, 'Andrea', 'Spiazzi', 'andreapspiazzi@hotmail.com'),
     ],
     (3875346390, 'Douwe', '', ''): [
-        (3875346390, 'Douwe', '', ''),
+        (3875342564, 'Douwe', '', ''),
     ],
 }
 

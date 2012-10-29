@@ -43,7 +43,7 @@ class BillAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
             'fields': (
-                ('fleet', 'invoice'),
+                ('fleet', 'invoice', 'invoice_format'),
                 ('parsing_date', 'upload_date'),
             )
         }),
@@ -112,7 +112,8 @@ class BillAdmin(admin.ModelAdmin):
             return HttpResponseRedirect('..')
 
         emails = sender.send_reports(dry_run=True)
-        return TemplateResponse(request, 'admin/notify_users.html',
+        return TemplateResponse(request,
+                                'admin/fleetcore/bill/notify_users.html',
                                 dict(emails=emails))
 
 

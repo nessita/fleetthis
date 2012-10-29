@@ -106,9 +106,11 @@ class Fleet(models.Model):
     account_number = models.PositiveIntegerField()
     email = models.EmailField()
     provider = models.CharField(max_length=100)
+    report_consumption_template = models.TextField(blank=True)
 
     def __unicode__(self):
         return '%s - %s' % (self.provider, self.account_number)
+
 
 class Bill(models.Model):
     """Monthly bill for a fleet."""

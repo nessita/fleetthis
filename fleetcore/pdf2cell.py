@@ -43,7 +43,7 @@ OLD_FORMAT = dict(
     date_token='Fecha de Factura',
     front_page=1,
     join_token='',
-    table_page=7,
+    table_pages=(2, 7, 10),
 )
 
 NEW_FORMAT = dict(
@@ -53,10 +53,14 @@ NEW_FORMAT = dict(
     date_token='Fecha de Factura: ',
     front_page=2,
     join_token=' ',
-    table_page=3,
+    table_pages=(3,),
 )
 
 PHONE_ROW_RE = re.compile(r'\s*(\d+,\d{2})\s*')
+
+
+class CellularDataParseError(Exception):
+    """The phone data could not be parsed."""
 
 
 class CellularConverter(PDFPageAggregator):
@@ -71,12 +75,13 @@ class CellularConverter(PDFPageAggregator):
     phone_length = 11
 
     def __init__(self, input_fd, format, *args, **kwargs):
-        self.bill_format = self.formats[format]
+        self.bill_format = self.formats[format].copy()
         self._bill_date = None
         self._bill_number = None
         self._bill_total = None
         self._bill_debt = None
         self._data = []
+
         # Create a PDF parser object associated with the file object.
         parser = PDFParser(input_fd)
         # Create a PDF document object that stores the document structure.
@@ -176,8 +181,12 @@ class CellularConverter(PDFPageAggregator):
             layout = self.get_result()
             if layout.pageid == self.bill_format['front_page']:
                 self._extract_text(layout, self._process_front_page)
-            elif layout.pageid == self.bill_format['table_page']:
+            elif (layout.pageid in self.bill_format['table_pages'] and
+                  not self._data):
                 self._extract_text(layout, self._process_phone_row)
+
+        if not self._data:
+            raise CellularDataParseError()
 
         result = {
             'bill_date': self._bill_date, 'bill_number': self._bill_number,
