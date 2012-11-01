@@ -472,7 +472,8 @@ class Consumption(models.Model):
         plan = self.phone.plan
         if plan.with_min_clearing:
             total -= self.monthly_price
-            total += self.total_min * plan.price_min
+            # do not use total_min since it includes the exceeded_min
+            total += (self.included_min + self.penalty_min) * plan.price_min
         else:
             total = self.monthly_price
 
