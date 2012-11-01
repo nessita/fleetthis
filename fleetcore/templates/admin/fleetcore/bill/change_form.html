@@ -25,7 +25,7 @@
   {% for c in data.consumptions %}
   <tr class="{% cycle "row1" "row2" %}">
     <td><a href="/admin/fleetcore/consumption/{{ c.id }}">{{ c.phone.number }}</a></td>
-    <td>{{ c.phone.plan.name }}</td>
+    <td>{{ c.plan.name }}</td>
     <td>{{ c.phone.user.get_full_name }}</td>
     <td>$ {{ c.total|floatformat:0 }}</td>
   </tr>
