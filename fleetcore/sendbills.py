@@ -22,7 +22,8 @@ class BillSummarySender(object):
         result = []
         template = Template(self.bill.fleet.report_consumption_template)
         for leader, data in self.bill.details.iteritems():
-            body = template.render(Context({'data': data, 'leader': leader}))
+            body = template.render(Context({'bill': self.bill, 'data': data,
+                                            'leader': leader}))
             subject = SUBJECT % self.bill.billing_date.strftime('%B')
             from_email = settings.ADMIN_EMAIL
             to_list = [leader.email, from_email]

@@ -80,7 +80,8 @@ class Factory(object):
         return self.make_something(Phone, default, **kwargs)
 
     def make_consumption(self, **kwargs):
-        default = dict(bill=self.make_bill(), phone=self.make_phone())
+        default = dict(bill=self.make_bill(), phone=self.make_phone(),
+                       plan=self.make_plan())
         return self.make_something(Consumption, default, **kwargs)
 
     def make_penalty(self, **kwargs):

@@ -11,9 +11,55 @@ from django.contrib.auth.models import Group, User
 from fleetcore.models import DataPack, Fleet, Plan, Phone, SMSPack
 
 
+REPORT_TEMPLATE = """
+Hola {{ leader.first_name }}!
+
+A continuación el detalle del consumo del mes {{ bill.billing_date|date:"F" }}
+detallado por nro. de teléfono/persona:
+{% for c in data.consumptions %}
+{{ c.phone.user.get_full_name }} - {{ c.phone.plan.name }} - {{ c.phone.number }}: ${{ c.total|floatformat:0 }}{% endfor %}
+
+Total: ${{ data.total|floatformat:0 }}
+
+Podrías por favor mandarme a este email el comprobante de pago
+escaneado/fotografiado antes del 10 de este mes?
+
+Recordá usar la cuenta nueva para hacer tus pagos: {{ bill.fleet.account_number }}.
+
+Muchas gracias!
+
+Ah, y si podés mandarme un ack de que recibiste este mail, mejor.
+
+Naty.
+
+PD: este es un mail generado automáticamente, pero podés escribirme mail a
+esta dirección que yo lo recibo sin drama.
+
+PD2: Otra novedad es que Claro anunció un aumento del precio de los planes:
+
+"A partir del 25/01/2013 el plan TCL16 tendrá las siguientes condiciones:
+Abono $39, minutos incluidos 130, precio minuto (o fracción) excedente $0,31.
+Precio del SMS con factura y excedente de paquetes $0,26.
+Paquetes de SMS: paquete, abono, respectivamente
+(50 SMS):$6;
+(100 SMS):$11;
+(200 SMS):$19;
+(300 SMS):$25;
+(400 SMS):$30;
+(500 SMS):$36;
+(1000 SMS):$56.
+Precios SIN IMPUESTOS; corresponden a la condición tributaria del cliente."
+
+Detalles de los planes:
+
+{{ data.consumptions.0.phone.plan.description }}
+
+"""
+
 PLANS = (
     # ('XMD01', 2200, True), ('INTRC', 9507, False),
-    ('TCM07', Decimal('35.00'), 130,
+    ('', Decimal('0'), 0, Decimal('0'), 0, Decimal('0'), "DUMMY PLAN."),
+    ('TCM07', Decimal('35.00'), 127,
      Decimal('0.22'), 100, Decimal('0.07'),
      """DETALLE PLAN DE PRECIO: PLAN TCM07 - Abono: $ 35.00 Pesos
 Libres en el Plan:$ 35.00
@@ -25,7 +71,7 @@ Los SMS hacen clearing con el resto de las líneas en el mismo plan,
 y cada línea aporta 100 SMS a la bolsa. Los SMS dentro de la bolsa de mensajes
 salen $ 0.07, y por afuera cada uno sale $ 0.10.
 """),
-    ('TSC16', Decimal('35.00'), 130, Decimal('0.27'), 0,
+    ('TSC16', Decimal('35.00'), 129, Decimal('0.27'), 0,
      Decimal('0.24'),
      """DETALLE PLAN DE PRECIO: PLAN TSC16 - Abono: $ 35.00 Pesos
 Libres en el Plan: $35.00
@@ -60,6 +106,27 @@ SMS_PACKS = (
     (500, Decimal('32.50')),
     (1000, Decimal('49.90')),
 )
+
+DATA_PACKS_BINDING = dict((
+    (1133471500, 50),
+    (1166936420, 45),
+    (3513901750, 50),
+    (3516847979, 50),
+))
+
+SMS_PACKS_BINDINGS = dict((
+    (3516847977, 50),
+    (3512255432, 100),
+    (3513456948, 100),
+    (3516656710, 100),
+    (3513290204, 100),
+    (3513901750, 100),
+    (3513290201, 200),
+    (3513290207, 200),
+    (3516624678, 200),
+    (3516847979, 200),
+    (3516624706, 300),
+))
 
 PHONES = {
     (3513500734, 'Anthony', 'Lenton', 'antoniolenton@gmail.com'): [
@@ -144,8 +211,18 @@ class Command(BaseCommand):
             profile.leader = admin if leader is None else leader
             profile.save()
 
-            Phone.objects.create(number=number, user=user,
-                                 notes='', plan=tcl16)
+            p = Phone.objects.create(number=number, user=user,
+                                     notes='', plan=tcl16)
+
+            if number in DATA_PACKS_BINDING:
+                price = DATA_PACKS_BINDING[number]
+                p.data_pack = DataPack.objects.get(price=price)
+
+            if number in SMS_PACKS_BINDINGS:
+                units = SMS_PACKS_BINDINGS[number]
+                p.sms_pack = SMSPack.objects.get(units=units)
+
+            p.save()
 
             return user
 
@@ -159,5 +236,8 @@ class Command(BaseCommand):
                 user=admin, account_number=account,
                 email=email, provider='Claro',
             )
+            if account == 725615496:
+                fleet.report_consumption_template = REPORT_TEMPLATE
+                fleet.save()
 
         self.stdout.write('Successfully loaded initial data.\n')

@@ -68,6 +68,9 @@ class BillAdmin(admin.ModelAdmin):
             url(r'^(?P<bill_id>\d+)/process-invoice/$',
                 self.admin_site.admin_view(self.process_invoice),
                 name='process-invoice'),
+            url(r'^(?P<bill_id>\d+)/recalculate/$',
+                self.admin_site.admin_view(self.recalculate),
+                name='recalculate'),
             url(r'^(?P<bill_id>\d+)/notify-users/$',
                 self.admin_site.admin_view(self.notify_users),
                 name='notify-users'),
@@ -89,6 +92,20 @@ class BillAdmin(admin.ModelAdmin):
             messages.error(request, error_msg + unicode(e))
         else:
             msg = _('Invoice processed successfully.')
+            messages.success(request, msg)
+
+        return HttpResponseRedirect('..')
+
+    def recalculate(self, request, bill_id):
+        obj = get_object_or_404(self.queryset(request), pk=bill_id)
+        error_msg = _('Invoice processed unsuccessfully. Error: ')
+
+        try:
+            obj.calculate_penalties()
+        except Bill.AdjustmentError as e:
+            messages.error(request, error_msg + unicode(e))
+        else:
+            msg = _('Penalties re-calculated successfully.')
             messages.success(request, msg)
 
         return HttpResponseRedirect('..')
@@ -124,7 +141,7 @@ class ConsumptionAdmin(admin.ModelAdmin):
     list_filter = ('bill', 'phone',)
     fieldsets = (
         (None, {
-            'fields': ('phone', 'bill',)
+            'fields': ('phone', 'bill', 'plan'),
         }),
         ('Totals', {
             'fields': (('penalty_min', 'total_min'),
@@ -134,9 +151,7 @@ class ConsumptionAdmin(admin.ModelAdmin):
         ('Data from provider', {
             'classes': ('collapse',),
             'fields': (
-                'reported_user',
-                ('reported_plan', 'monthly_price'),
-                'included_min',
+                ('reported_user', 'monthly_price', 'included_min'),
                 ('services', 'refunds'),
                 ('exceeded_min', 'exceeded_min_price'),
                 ('ndl_min', 'ndl_min_price'),

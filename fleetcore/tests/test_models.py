@@ -116,7 +116,8 @@ class ParseInvoiceTestCase(BillTestCase):
 
     def assert_no_data_processed(self, pdf_parser_called=False):
         if pdf_parser_called:
-            self.mock_pdf_parser.assert_called_with(self.obj.invoice.path)
+            self.mock_pdf_parser.assert_called_with(self.obj.invoice.path,
+                                                    format='new')
         else:
             self.assertFalse(self.mock_pdf_parser.called)
 
@@ -187,7 +188,7 @@ class ParseInvoiceTestCase(BillTestCase):
         self.test_missing_one_phone()
         plan = Plan.objects.create(name='PLAN2')
         user = User.objects.create(username='1987654320')
-        Phone.objects.create(number='1987654320', plan=plan, user=user)
+        phone = Phone.objects.create(number='1987654320', plan=plan, user=user)
 
         now = datetime.now()
         with patch('fleetcore.models.datetime') as mock_date:
@@ -195,7 +196,8 @@ class ParseInvoiceTestCase(BillTestCase):
             # both phones are in the system, so parse should succeed
             self.obj.parse_invoice()
 
-        self.mock_pdf_parser.assert_called_with(self.obj.invoice.path)
+        self.mock_pdf_parser.assert_called_with(self.obj.invoice.path,
+                                                format='new')
         self.assertEqual(Consumption.objects.count(), 2)
 
         # reload bill from db
@@ -208,8 +210,10 @@ class ParseInvoiceTestCase(BillTestCase):
 
         for d in PDF_PARSED_SAMPLE['phone_data']:
             c = Consumption.objects.get(phone__number=d[PHONE_NUMBER])
+            self.assertEqual(c.bill, self.obj)
+            self.assertEqual(c.phone.number, d[PHONE_NUMBER])
+            self.assertEqual(c.plan.name, d[PLAN])
             self.assertEqual(c.reported_user, d[USER])
-            self.assertEqual(c.reported_plan, d[PLAN])
             self.assertEqual(c.monthly_price, d[MONTHLY_PRICE])
             self.assertEqual(c.services, d[SERVICES])
             self.assertEqual(c.refunds, d[REFUNDS])
@@ -225,7 +229,6 @@ class ParseInvoiceTestCase(BillTestCase):
             self.assertEqual(c.equipment_price, d[EQUIPMENT_PRICE])
             self.assertEqual(c.other_price, d[OTHER_PRICE])
             self.assertEqual(c.reported_total, d[TOTAL_PRICE])
-            self.assertEqual(c.bill, self.obj)
 
     def test_do_not_parse_twice(self):
         self.test_successful_parsing()
@@ -260,7 +263,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
         )
         if bill is None:
             bill = self.obj
-        return Consumption.objects.create(phone=phone, bill=bill)
+        return Consumption.objects.create(phone=phone, bill=bill, plan=plan)
 
     def assert_no_penalties(self):
         self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 0)
@@ -287,7 +290,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
         self.plan1.included_min = 100
         self.plan1.save()
 
-        for c in Consumption.objects.filter(phone__plan=self.plan1):
+        for c in Consumption.objects.filter(plan=self.plan1):
             c.included_min = 80
             c.save()
 
@@ -304,7 +307,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
         self.plan1.included_min = 100
         self.plan1.save()
 
-        for c in Consumption.objects.filter(phone__plan=self.plan1):
+        for c in Consumption.objects.filter(plan=self.plan1):
             c.included_min = 100
             c.exceeded_min = 20
             c.save()
@@ -322,7 +325,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
         self.plan1.included_min = 100
         self.plan1.save()
 
-        for c in Consumption.objects.filter(phone__plan=self.plan1):
+        for c in Consumption.objects.filter(plan=self.plan1):
             c.included_min = 100
             c.save()
 
@@ -334,7 +337,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
         self.plan1.included_min = 100
         self.plan1.save()
 
-        c1, c2, c3 = Consumption.objects.filter(phone__plan=self.plan1)
+        c1, c2, c3 = Consumption.objects.filter(plan=self.plan1)
 
         c1.included_min = 35
         c1.exceeded_min = 15
@@ -396,7 +399,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
 
     def test_penalties_applied(self):
         self.test_with_data_with_min_clearing_minutes_left()
-        c1, c2, c3 = Consumption.objects.filter(phone__plan=self.plan1)
+        c1, c2, c3 = Consumption.objects.filter(plan=self.plan1)
         # c1 has 50 used mins, and c2 has 80
         # penalty to apply is 50 minutes, so c1 should end up with
         # 40 penalty mins, and c2 with 10 (thus both will have a total

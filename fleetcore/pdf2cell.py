@@ -41,7 +41,7 @@ OLD_FORMAT = dict(
     bill_number_token='Factura Nro.',
     bill_total_token='TOTAL A PAGAR$',
     date_token='Fecha de Factura',
-    front_page=1,
+    front_page=(1,),
     join_token='',
     table_pages=(2, 7, 10),
 )
@@ -51,9 +51,9 @@ NEW_FORMAT = dict(
     bill_number_token='Factura Nro.: ',
     bill_total_token='TOTAL FACTURA: $',
     date_token='Fecha de Factura: ',
-    front_page=2,
+    front_page=(2, 3),
     join_token=' ',
-    table_pages=(3,),
+    table_pages=(3, 4),
 )
 
 PHONE_ROW_RE = re.compile(r'\s*(\d+,\d{2})\s*')
@@ -179,7 +179,8 @@ class CellularConverter(PDFPageAggregator):
             interpreter.process_page(page)
             # receive the LTPage object for the page.
             layout = self.get_result()
-            if layout.pageid == self.bill_format['front_page']:
+            if (layout.pageid in self.bill_format['front_page'] and
+                    not self._bill_debt):
                 self._extract_text(layout, self._process_front_page)
             elif (layout.pageid in self.bill_format['table_pages'] and
                   not self._data):

@@ -266,16 +266,40 @@ class Bill(models.Model):
         if not os.path.exists(fname):
             raise Bill.ParseError('Invoice path does not exist.')
 
-        data = pdf2cell.parse_file(fname, format=self.invoice_format)
+        try:
+            data = pdf2cell.parse_file(fname, format=self.invoice_format)
+        except pdf2cell.CellularDataParseError as e:
+            raise Bill.ParseError(unicode(e))
+
         for d in data.get('phone_data', []):
             try:
                 phone = Phone.objects.get(number=d[PHONE_NUMBER])
             except Phone.DoesNotExist:
                 raise Bill.ParseError('Phone %s does not exist.' %
                                       d[PHONE_NUMBER])
+
+            plan = None
+            if not d[PLAN]:
+                # this line is disappearing, so there must be a previous
+                # consumption with the plna info that serves for this instance
+                import pdb; pdb.set_trace()
+                try:
+                    c = Consumption.objects.filter(phone=phone).latest()
+                except Consumption.DoesNotExist:
+                    raise Bill.ParseError('Previous consumption for %s does '
+                                          'not exist and the plan info is not '
+                                          'defined.' % phone)
+                else:
+                    plan = c.plan
+
+            if not plan:
+                try:
+                    plan = Plan.objects.get(name=d[PLAN])
+                except Plan.DoesNotExist:
+                    raise Bill.ParseError('Plan %s does not exist.' % d[PLAN])
+
             kwargs = dict(
                 reported_user=d[USER],
-                reported_plan=d[PLAN],
                 monthly_price=d[MONTHLY_PRICE],
                 services=d[SERVICES],
                 refunds=d[REFUNDS],
@@ -292,7 +316,8 @@ class Bill(models.Model):
                 other_price=d[OTHER_PRICE],
                 reported_total=d[TOTAL_PRICE],
             )
-            Consumption.objects.create(phone=phone, bill=self, **kwargs)
+            Consumption.objects.create(phone=phone, bill=self, plan=plan,
+                                       **kwargs)
 
         bill_date = data.get('bill_date')
         if bill_date:
@@ -313,11 +338,11 @@ class Bill(models.Model):
                                     with_min_clearing=True).distinct()
         for plan in plans:
             if Penalty.objects.filter(bill=self, plan=plan).count() > 0:
-                logging.warning('Penalty for "%s" and "%s" already exists.',
-                                self, plan)
-                continue
+                logging.warning('Penalty for "%s" and "%s" already exists, '
+                                'deleting.', self, plan)
+                Penalty.objects.filter(bill=self, plan=plan).delete()
 
-            consumptions = self.consumption_set.filter(phone__plan=plan)
+            consumptions = self.consumption_set.filter(plan=plan)
             if not consumptions:
                 logging.info('There is no consumptions for "%s" and "%s".',
                              self, plan)
@@ -329,6 +354,11 @@ class Bill(models.Model):
                 penalty = Penalty.objects.create(bill=self, plan=plan,
                                                  minutes=target - real)
                 self.apply_penalty(consumptions, penalty)
+            else:
+                # remove existing penalties if any, we may be recalculating
+                for c in consumptions:
+                    c.penalty_min = 0
+                    c.save()
 
 
 class Plan(models.Model):
@@ -394,9 +424,12 @@ class Consumption(models.Model):
     phone = models.ForeignKey(Phone)
     bill = models.ForeignKey(Bill)
 
+    # Even though there is a FK to phone, the current plan for the phone may
+    # not be the plan for this consumption (since phones may change its plan).
+    plan = models.ForeignKey(Plan)
+
     # every field (literal) from the invoice
     reported_user = models.CharField('Usuario', max_length=500, blank=True)
-    reported_plan = models.CharField('Plan', max_length=100, blank=True)
     monthly_price = MoneyField('Precio del plan ($)')
     services = MoneyField('Cargos y servicios ($)')
     refunds = MoneyField('Reintegros ($)')
