@@ -215,6 +215,10 @@ def parse_file(fname, format='new'):
 if __name__ == '__main__':
     fname = sys.argv[1]  # fail if no filename is given
     data = parse_file(fname)
+    phone_data = data.pop('phone_data')
     print('-----------------------------')
-    print(data)
+    for k, v in data.iteritems():
+        print(k, v)
+    print('-----------------------------')
+    print('\n'.join(map(lambda l: '|'.join(map(unicode, l)), phone_data)))
     print('-----------------------------')
