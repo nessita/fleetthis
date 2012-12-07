@@ -373,11 +373,20 @@ class CalculatePenaltiesTestCase(BillTestCase):
 
         with patch('fleetcore.models.logging.warning') as mock:
             self.obj.calculate_penalties()
-            mock.assert_called_once_with('Penalty for "%s" and "%s" already '
-                                         'exists.', self.obj, self.plan1)
+            mock.assert_called_once_with(
+                'Penalty for "%s" and "%s" already exists, deleting.',
+                self.obj, self.plan1)
 
-        # two penalties, one from the invoked test and another from this one
+        # two penalties, one from the invoked test for PLAN1
+        # and another from this one for PLAN2
         self.assertEqual(Penalty.objects.filter(bill=self.obj).count(), 2)
+        # penalty for PLAN1 was already tested, but let's test it again
+        # because it was deleted and re-added
+        penalty = Penalty.objects.get(plan=self.plan1)
+        self.assertEqual(penalty.bill, self.obj)
+        self.assertEqual(penalty.minutes, 50)
+        self.assertEqual(penalty.sms, 0)
+        # assert over the newly created penalty for PLAN2
         penalty = Penalty.objects.get(plan=plan2)
         self.assertEqual(penalty.bill, self.obj)
         self.assertEqual(penalty.minutes, 300)

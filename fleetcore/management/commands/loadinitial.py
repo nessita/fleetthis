@@ -17,14 +17,16 @@ Hola {{ leader.first_name }}!
 A continuación el detalle del consumo del mes {{ bill.billing_date|date:"F" }}
 detallado por nro. de teléfono/persona:
 {% for c in data.consumptions %}
-{{ c.phone.user.get_full_name }} - {{ c.phone.plan.name }} - {{ c.phone.number }}: ${{ c.total|floatformat:0 }}{% endfor %}
+{{ c.phone.user.get_full_name }} - {{ c.phone.plan.name }} -
+{{ c.phone.number }}: ${{ c.total|floatformat:0 }}{% endfor %}
 
 Total: ${{ data.total|floatformat:0 }}
 
 Podrías por favor mandarme a este email el comprobante de pago
 escaneado/fotografiado antes del 10 de este mes?
 
-Recordá usar la cuenta nueva para hacer tus pagos: {{ bill.fleet.account_number }}.
+Recordá usar la cuenta nueva para hacer tus pagos:
+{{ bill.fleet.account_number }}.
 
 Muchas gracias!
 
@@ -34,21 +36,6 @@ Naty.
 
 PD: este es un mail generado automáticamente, pero podés escribirme mail a
 esta dirección que yo lo recibo sin drama.
-
-PD2: Otra novedad es que Claro anunció un aumento del precio de los planes:
-
-"A partir del 25/01/2013 el plan TCL16 tendrá las siguientes condiciones:
-Abono $39, minutos incluidos 130, precio minuto (o fracción) excedente $0,31.
-Precio del SMS con factura y excedente de paquetes $0,26.
-Paquetes de SMS: paquete, abono, respectivamente
-(50 SMS):$6;
-(100 SMS):$11;
-(200 SMS):$19;
-(300 SMS):$25;
-(400 SMS):$30;
-(500 SMS):$36;
-(1000 SMS):$56.
-Precios SIN IMPUESTOS; corresponden a la condición tributaria del cliente."
 
 Detalles de los planes:
 

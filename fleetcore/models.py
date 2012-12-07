@@ -282,7 +282,6 @@ class Bill(models.Model):
             if not d[PLAN]:
                 # this line is disappearing, so there must be a previous
                 # consumption with the plna info that serves for this instance
-                import pdb; pdb.set_trace()
                 try:
                     c = Consumption.objects.filter(phone=phone).latest()
                 except Consumption.DoesNotExist:
@@ -349,7 +348,9 @@ class Bill(models.Model):
                 continue
 
             target = plan.included_min * consumptions.count()
-            real = consumptions.aggregate(mins=Sum('total_min'))['mins']
+            cons = consumptions.aggregate(inclu=Sum('included_min'),
+                                          excee=Sum('exceeded_min'))
+            real = cons['inclu'] + cons['excee']
             if real < target:
                 penalty = Penalty.objects.create(bill=self, plan=plan,
                                                  minutes=target - real)
