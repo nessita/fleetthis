@@ -7,13 +7,14 @@ import itertools
 import logging
 import os
 
+from copy import deepcopy
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from django.core.files import File
 from django.contrib.auth.models import User
 from django.test import TransactionTestCase
-from mock import patch
+from mock import call, patch
 
 from fleetcore.models import (
     Bill,
@@ -91,6 +92,10 @@ class BaseModelTestCase(TransactionTestCase):
                             'make_%s' % self.model.__name__.lower())
             self.obj = maker(**self.kwargs)
 
+        patcher = patch('fleetcore.models.logging')
+        self.mock_logging = patcher.start()
+        self.addCleanup(self.mock_logging.stop)
+
     def test_id(self):
         """Model can be created and stored."""
         if self.model is not None:
@@ -114,6 +119,11 @@ class BillTestCase(BaseModelTestCase):
 class ParseInvoiceTestCase(BillTestCase):
     """The test suite for the parse_invoice method for the Bill model."""
 
+    def _make_phone(self, plan, number):
+        plan = Plan.objects.create(name=plan)
+        user = User.objects.create(username=number)
+        return Phone.objects.create(number=number, plan=plan, user=user)
+
     def assert_no_data_processed(self, pdf_parser_called=False):
         if pdf_parser_called:
             self.mock_pdf_parser.assert_called_with(self.obj.invoice.path,
@@ -129,6 +139,35 @@ class ParseInvoiceTestCase(BillTestCase):
         self.assertEqual(bill.provider_number, '')
         self.assertEqual(bill.billing_debt, Decimal('0'))
         self.assertEqual(bill.billing_total, Decimal('0'))
+
+    def assert_consumption_processed(self, data, bill=None, real_plan=None):
+        if bill is None:
+            bill = self.obj
+        if real_plan is None:
+            real_plan = Plan.objects.get(name=data[PLAN])
+
+        c = Consumption.objects.get(bill=bill,
+                                    phone__number=data[PHONE_NUMBER])
+        self.assertEqual(c.bill, bill)
+        self.assertEqual(c.phone.number, data[PHONE_NUMBER])
+        self.assertEqual(c.plan, real_plan)
+        self.assertEqual(c.reported_user, data[USER])
+        self.assertEqual(c.reported_plan, data[PLAN])
+        self.assertEqual(c.monthly_price, data[MONTHLY_PRICE])
+        self.assertEqual(c.services, data[SERVICES])
+        self.assertEqual(c.refunds, data[REFUNDS])
+        self.assertEqual(c.included_min, data[INCLUDED_MIN])
+        self.assertEqual(c.exceeded_min, data[EXCEEDED_MIN])
+        self.assertEqual(c.exceeded_min_price, data[EXCEEDED_MIN_PRICE])
+        self.assertEqual(c.ndl_min, data[NDL_MIN])
+        self.assertEqual(c.ndl_min_price, data[NDL_PRICE])
+        self.assertEqual(c.idl_min, data[IDL_MIN])
+        self.assertEqual(c.idl_min_price, data[IDL_PRICE])
+        self.assertEqual(c.sms, data[SMS])
+        self.assertEqual(c.sms_price, data[SMS_PRICE])
+        self.assertEqual(c.equipment_price, data[EQUIPMENT_PRICE])
+        self.assertEqual(c.other_price, data[OTHER_PRICE])
+        self.assertEqual(c.reported_total, data[TOTAL_PRICE])
 
     def test_empty_path(self):
         assert Consumption.objects.count() == 0
@@ -175,10 +214,7 @@ class ParseInvoiceTestCase(BillTestCase):
 
     def test_missing_one_phone(self):
         self.test_missing_phones()
-
-        plan = Plan.objects.create(name='PLAN1')
-        user = User.objects.create(username='1234567890')
-        Phone.objects.create(number='1234567890', plan=plan, user=user)
+        self._make_phone(plan='PLAN1', number='1234567890')
 
         # only one phone is in the system, so parse is not successful
         self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
@@ -186,9 +222,7 @@ class ParseInvoiceTestCase(BillTestCase):
 
     def test_successful_parsing(self):
         self.test_missing_one_phone()
-        plan = Plan.objects.create(name='PLAN2')
-        user = User.objects.create(username='1987654320')
-        phone = Phone.objects.create(number='1987654320', plan=plan, user=user)
+        self._make_phone(plan='PLAN2', number='1987654320')
 
         now = datetime.now()
         with patch('fleetcore.models.datetime') as mock_date:
@@ -209,26 +243,35 @@ class ParseInvoiceTestCase(BillTestCase):
         self.assertEqual(bill.provider_number, '123456abcd')
 
         for d in PDF_PARSED_SAMPLE['phone_data']:
-            c = Consumption.objects.get(phone__number=d[PHONE_NUMBER])
-            self.assertEqual(c.bill, self.obj)
-            self.assertEqual(c.phone.number, d[PHONE_NUMBER])
-            self.assertEqual(c.plan.name, d[PLAN])
-            self.assertEqual(c.reported_user, d[USER])
-            self.assertEqual(c.monthly_price, d[MONTHLY_PRICE])
-            self.assertEqual(c.services, d[SERVICES])
-            self.assertEqual(c.refunds, d[REFUNDS])
-            self.assertEqual(c.included_min, d[INCLUDED_MIN])
-            self.assertEqual(c.exceeded_min, d[EXCEEDED_MIN])
-            self.assertEqual(c.exceeded_min_price, d[EXCEEDED_MIN_PRICE])
-            self.assertEqual(c.ndl_min, d[NDL_MIN])
-            self.assertEqual(c.ndl_min_price, d[NDL_PRICE])
-            self.assertEqual(c.idl_min, d[IDL_MIN])
-            self.assertEqual(c.idl_min_price, d[IDL_PRICE])
-            self.assertEqual(c.sms, d[SMS])
-            self.assertEqual(c.sms_price, d[SMS_PRICE])
-            self.assertEqual(c.equipment_price, d[EQUIPMENT_PRICE])
-            self.assertEqual(c.other_price, d[OTHER_PRICE])
-            self.assertEqual(c.reported_total, d[TOTAL_PRICE])
+            self.assert_consumption_processed(data=d)
+
+        for c in Consumption.objects.filter(bill=self.obj):
+            # warning about not having previous consumptions
+            calls = call('No previous consumption for %s', c.phone)
+        self.mock_logging.warning.assert_has_calls(calls)
+
+    def test_uses_plan_from_previous_period(self):
+        self.test_successful_parsing()
+        # parse new data where the plan changed for a given phone
+        next_sample = deepcopy(PDF_PARSED_SAMPLE)
+
+        old_plan_name = next_sample['phone_data'][0][2]
+        old_plan = Plan.objects.get(name=old_plan_name)
+
+        new_plan_name = 'FOO23'
+        new_plan = Plan.objects.create(name=new_plan_name)
+
+        next_sample['phone_data'][0][2] = new_plan_name
+        self.mock_pdf_parser.return_value = next_sample
+
+        next_bill = self.factory.make_bill(fleet=self.obj.fleet)
+        next_bill.parse_invoice()
+        data = next_sample['phone_data']
+        # first phone changed plan, so assert is using the old plan
+        self.assert_consumption_processed(data=data[0], bill=next_bill,
+                                          real_plan=old_plan)
+        # second phone DID NOT changed plan, so plan is the same
+        self.assert_consumption_processed(data=data[1], bill=next_bill)
 
     def test_do_not_parse_twice(self):
         self.test_successful_parsing()
@@ -371,11 +414,10 @@ class CalculatePenaltiesTestCase(BillTestCase):
         c.exceeded_min = 13
         c.save()
 
-        with patch('fleetcore.models.logging.warning') as mock:
-            self.obj.calculate_penalties()
-            mock.assert_called_once_with(
-                'Penalty for "%s" and "%s" already exists, deleting.',
-                self.obj, self.plan1)
+        self.obj.calculate_penalties()
+        self.mock_logging.warning.assert_called_once_with(
+            'Penalty for "%s" and "%s" already exists, deleting.',
+            self.obj, self.plan1)
 
         # two penalties, one from the invoked test for PLAN1
         # and another from this one for PLAN2

@@ -279,19 +279,21 @@ class Bill(models.Model):
                                       d[PHONE_NUMBER])
 
             plan = None
-            if not d[PLAN]:
-                # this line is disappearing, so there must be a previous
-                # consumption with the plna info that serves for this instance
-                try:
-                    c = Consumption.objects.filter(phone=phone).latest()
-                except Consumption.DoesNotExist:
+            # always try to use the plan from the previous invoice, if present
+            try:
+                c = Consumption.objects.filter(phone=phone).latest()
+            except Consumption.DoesNotExist:
+                logging.warning('No previous consumption for %s', phone)
+            else:
+                plan = c.plan
+
+            if not plan:
+                if not d[PLAN]:
+                    # this phone is disappearing, so there should be a previous
+                    # consumption with the plan info that serves for this item
                     raise Bill.ParseError('Previous consumption for %s does '
                                           'not exist and the plan info is not '
                                           'defined.' % phone)
-                else:
-                    plan = c.plan
-
-            if not plan:
                 try:
                     plan = Plan.objects.get(name=d[PLAN])
                 except Plan.DoesNotExist:
@@ -299,6 +301,7 @@ class Bill(models.Model):
 
             kwargs = dict(
                 reported_user=d[USER],
+                reported_plan=d[PLAN],
                 monthly_price=d[MONTHLY_PRICE],
                 services=d[SERVICES],
                 refunds=d[REFUNDS],
@@ -431,6 +434,7 @@ class Consumption(models.Model):
 
     # every field (literal) from the invoice
     reported_user = models.CharField('Usuario', max_length=500, blank=True)
+    reported_plan = models.CharField('Plan oficial', max_length=5, blank=True)
     monthly_price = MoneyField('Precio del plan ($)')
     services = MoneyField('Cargos y servicios ($)')
     refunds = MoneyField('Reintegros ($)')
