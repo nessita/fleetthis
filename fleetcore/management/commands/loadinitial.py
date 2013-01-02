@@ -17,16 +17,16 @@ Hola {{ leader.first_name }}!
 A continuación el detalle del consumo del mes {{ bill.billing_date|date:"F" }}
 detallado por nro. de teléfono/persona:
 {% for c in data.consumptions %}
-{{ c.phone.user.get_full_name }} - {{ c.phone.plan.name }} -
-{{ c.phone.number }}: ${{ c.total|floatformat:0 }}{% endfor %}
-
-Total: ${{ data.total|floatformat:0 }}
-
+{{ c.phone.number }} - {{ c.phone.user.get_full_name }} - {{ c.phone.plan.name }}: ${{ c.total|floatformat:0 }}
+  SMS: {{ c.sms }} (pack de mensajes: {{ c.phone.sms_pack|default_if_none:"ninguno" }})
+  Minutos: {{ c.total_min }}
+{% endfor %}
+Total a pagar: ${{ data.total|floatformat:0 }}
+{% for p in bill.penalty_set.all %}
+Este mes sobraron {{ p.minutes }} minutos para el plan {{ p.plan.name }}.
+{% endfor %}
 Podrías por favor mandarme a este email el comprobante de pago
 escaneado/fotografiado antes del 10 de este mes?
-
-Recordá usar la cuenta nueva para hacer tus pagos:
-{{ bill.fleet.account_number }}.
 
 Muchas gracias!
 
@@ -34,13 +34,9 @@ Ah, y si podés mandarme un ack de que recibiste este mail, mejor.
 
 Naty.
 
-PD: este es un mail generado automáticamente, pero podés escribirme mail a
-esta dirección que yo lo recibo sin drama.
-
 Detalles de los planes:
 
 {{ data.consumptions.0.phone.plan.description }}
-
 """
 
 PLANS = (

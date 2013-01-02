@@ -389,7 +389,7 @@ class DataPack(models.Model):
 
     def __unicode__(self):
         kbs = '%s kbs' % self.kbs if self.kbs else '(unlimited)'
-        return '%s - $%s' % (kbs, self.price)
+        return '%s - $%s + IMP' % (kbs, self.price)
 
 
 class SMSPack(models.Model):
@@ -398,7 +398,7 @@ class SMSPack(models.Model):
     price = MoneyField()
 
     def __unicode__(self):
-        return '%s sms - $%s' % (self.units, self.price)
+        return '%s sms - $%s + IMP' % (self.units, self.price)
 
 
 class Phone(models.Model):
