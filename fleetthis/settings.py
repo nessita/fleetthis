@@ -127,6 +127,7 @@ INSTALLED_APPS = (
     # 'django.contrib.admindocs',
     'fleetcore',
     'fleetusers',
+    'south',
 )
 
 # A sample logging configuration. The only tangible logging
