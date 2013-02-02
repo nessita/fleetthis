@@ -197,6 +197,8 @@ class Bill(models.Model):
         assert penalty_min > 0 and plan_mins > 0
 
         # filter those consumptions with unused minutes from the plan total
+        # currently, this only works the first time since total_min includes
+        # penalties, if any
         consumptions = consumptions.filter(total_min__lt=plan_mins)
 
         amount = consumptions.count()
@@ -251,6 +253,7 @@ class Bill(models.Model):
             else:
                 plan = c.plan
 
+            plan = None  # XXX FIXME
             if not plan:
                 if not d[PLAN]:
                     # this phone is disappearing, so there should be a previous
@@ -300,7 +303,7 @@ class Bill(models.Model):
             raise Bill.AdjustmentError('Bill must be parsed before making '
                                        'adjustments.')
 
-        plans = Plan.objects.filter(phone__consumption__bill=self,
+        plans = Plan.objects.filter(consumption__bill=self,
                                     with_min_clearing=True).distinct()
         for plan in plans:
             if Penalty.objects.filter(bill=self, plan=plan).count() > 0:
@@ -315,9 +318,9 @@ class Bill(models.Model):
                 continue
 
             target = plan.included_min * consumptions.count()
-            cons = consumptions.aggregate(inclu=Sum('included_min'),
-                                          excee=Sum('exceeded_min'))
-            real = cons['inclu'] + cons['excee']
+            cons = consumptions.aggregate(included=Sum('included_min'),
+                                          exceeded=Sum('exceeded_min'))
+            real = cons['included'] + cons['exceeded']
             if real < target:
                 penalty = Penalty.objects.create(bill=self, plan=plan,
                                                  minutes=target - real)
@@ -438,7 +441,7 @@ class Consumption(models.Model):
                           self.penalty_min)
 
         total = self.reported_total
-        plan = self.phone.plan
+        plan = self.plan
         if plan.with_min_clearing:
             total -= self.monthly_price
             # do not use total_min since it includes the exceeded_min

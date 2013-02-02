@@ -18,10 +18,12 @@ from fleetusers.models import UserProfile
 from fleetcore.models import (
     Bill,
     Consumption,
+    DataPack,
     Fleet,
     Penalty,
     Phone,
     Plan,
+    SMSPack,
 )
 from fleetcore.sendbills import BillSummarySender
 
@@ -86,17 +88,12 @@ class BillAdmin(admin.ModelAdmin):
         except Bill.ParseError as e:
             messages.error(request, error_msg + unicode(e))
 
-        try:
-            obj.calculate_penalties()
-        except Bill.AdjustmentError as e:
-            messages.error(request, error_msg + unicode(e))
-        else:
-            msg = _('Invoice processed successfully.')
-            messages.success(request, msg)
+        self.recalculate(request, bill_id,
+                         msg=_('Invoice processed successfully.'))
 
         return HttpResponseRedirect('..')
 
-    def recalculate(self, request, bill_id):
+    def recalculate(self, request, bill_id, msg=None):
         obj = get_object_or_404(self.queryset(request), pk=bill_id)
         error_msg = _('Invoice processed unsuccessfully. Error: ')
 
@@ -105,7 +102,7 @@ class BillAdmin(admin.ModelAdmin):
         except Bill.AdjustmentError as e:
             messages.error(request, error_msg + unicode(e))
         else:
-            msg = _('Penalties re-calculated successfully.')
+            msg = msg or _('Penalties re-calculated successfully.')
             messages.success(request, msg)
 
         return HttpResponseRedirect('..')
@@ -151,8 +148,9 @@ class ConsumptionAdmin(admin.ModelAdmin):
         ('Data from provider', {
             'classes': ('collapse',),
             'fields': (
-                ('reported_user', 'monthly_price', 'included_min'),
+                ('reported_user', 'reported_plan', 'monthly_price'),
                 ('services', 'refunds'),
+                ('included_min',),
                 ('exceeded_min', 'exceeded_min_price'),
                 ('ndl_min', 'ndl_min_price'),
                 ('idl_min', 'idl_min_price'), ('sms', 'sms_price'),
@@ -164,7 +162,9 @@ class ConsumptionAdmin(admin.ModelAdmin):
 
 admin.site.register(Bill, BillAdmin)
 admin.site.register(Consumption, ConsumptionAdmin)
+admin.site.register(DataPack)
 admin.site.register(Fleet)
 admin.site.register(Phone)
 admin.site.register(Plan)
 admin.site.register(UserProfile)
+admin.site.register(SMSPack)
