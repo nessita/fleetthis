@@ -471,6 +471,28 @@ class ConsumptionTestCase(BaseModelTestCase):
 
     model = Consumption
 
+    def test_total_min_before_penalties(self):
+        self.assertEqual(self.obj.total_min_before_penalties, 0)
+
+    def test_total_min_before_penalties_is_set_on_save(self):
+        for i, j, k in itertools.product([0, 13], repeat=3):
+            self.obj.included_min = i
+            self.obj.exceeded_min = j
+            self.obj.penalty_min = k
+
+            self.obj.save()
+            self.assertEqual(self.obj.total_min_before_penalties, i + j)
+
+    def test_wrong_total_min_before_penalties_is_corrected_on_save(self):
+        for i, j, k in itertools.product([0, 19], repeat=3):
+            self.obj.included_min = i
+            self.obj.exceeded_min = j
+            self.obj.penalty_min = k
+            self.obj.total_min_before_penalties = (i + j) / 2
+
+            self.obj.save()
+            self.assertEqual(self.obj.total_min_before_penalties, i + j)
+
     def test_total_min(self):
         self.assertEqual(self.obj.total_min, 0)
 

@@ -199,7 +199,8 @@ class Bill(models.Model):
         # filter those consumptions with unused minutes from the plan total
         # currently, this only works the first time since total_min includes
         # penalties, if any
-        consumptions = consumptions.filter(total_min__lt=plan_mins)
+        consumptions = consumptions.filter(
+            total_min_before_penalties__lt=plan_mins)
 
         amount = consumptions.count()
         if amount == 0:
@@ -207,7 +208,7 @@ class Bill(models.Model):
                             penalty)
         elif amount == 1:
             c = consumptions.get()
-            assert c.total_min + penalty_min <= plan_mins
+            assert c.total_min_before_penalties + penalty_min <= plan_mins
             c.penalty_min = penalty_min
             c.save()
         else:
@@ -253,7 +254,6 @@ class Bill(models.Model):
             else:
                 plan = c.plan
 
-            plan = None  # XXX FIXME
             if not plan:
                 if not d[PLAN]:
                     # this phone is disappearing, so there should be a previous
@@ -421,6 +421,8 @@ class Consumption(models.Model):
     # calculated *and* stored in the DB
     penalty_min = MinuteField('Multa de minutos')
     penalty_sms = SMSField('Multa de mensajes')
+    total_min_before_penalties = MinuteField('Suma de minutos consumidos y '
+                                             'excedentes, antes de multas')
     total_min = MinuteField('Suma de minutos consumidos y excedentes, '
                             'y multas')
     total_before_taxes = MoneyField()
@@ -437,14 +439,14 @@ class Consumption(models.Model):
                                                  self.phone)
 
     def save(self, *args, **kwargs):
-        self.total_min = (self.included_min + self.exceeded_min +
-                          self.penalty_min)
+        self.total_min_before_penalties = self.included_min + self.exceeded_min
+        self.total_min = self.total_min_before_penalties + self.penalty_min
 
         total = self.reported_total
         plan = self.plan
         if plan.with_min_clearing:
             total -= self.monthly_price
-            # do not use total_min since it includes the exceeded_min
+            # do not use <total_min since it includes the exceeded_min
             total += (self.included_min + self.penalty_min) * plan.price_min
         else:
             total = self.monthly_price

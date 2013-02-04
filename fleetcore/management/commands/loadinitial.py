@@ -11,7 +11,7 @@ from django.contrib.auth.models import Group, User
 from fleetcore.models import DataPack, Fleet, Plan, Phone, SMSPack
 
 
-with open(os.path.join(os.path.dirname(__file__), 'report_template.txt') as f:
+with open(os.path.join(os.path.dirname(__file__), 'report_template.txt')) as f:
     REPORT_TEMPLATE = f.read()
 
 
@@ -57,23 +57,23 @@ DATA_PACKS = (
 )
 
 SMS_PACKS = (
-    (50, Decimal('5.50')),
-    (100, Decimal('10.00')),
-    (200, Decimal('17.00')),
-    (300, Decimal('22.00')),
-    (400, Decimal('27.00')),
-    (500, Decimal('32.50')),
-    (1000, Decimal('49.90')),
+    (50, Decimal('6.00')),
+    (100, Decimal('11.00')),
+    (200, Decimal('19.00')),
+    (300, Decimal('25.00')),
+    (400, Decimal('30.00')),
+    (500, Decimal('36.00')),
+    (1000, Decimal('56.00')),
 )
 
 DATA_PACKS_BINDING = dict((
-    (1133471500, 50),
     (1166936420, 45),
     (3513901750, 50),
     (3516847979, 50),
 ))
 
 SMS_PACKS_BINDINGS = dict((
+    (3516656713, 50),
     (3516847977, 50),
     (3512255432, 100),
     (3513456948, 100),
