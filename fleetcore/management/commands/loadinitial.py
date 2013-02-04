@@ -11,33 +11,9 @@ from django.contrib.auth.models import Group, User
 from fleetcore.models import DataPack, Fleet, Plan, Phone, SMSPack
 
 
-REPORT_TEMPLATE = """
-Hola {{ leader.first_name }}!
+with open(os.path.join(os.path.dirname(__file__), 'report_template.txt') as f:
+    REPORT_TEMPLATE = f.read()
 
-A continuación el detalle del consumo del mes {{ bill.billing_date|date:"F" }}
-detallado por nro. de teléfono/persona:
-{% for c in data.consumptions %}
-{{ c.phone.number }} - {{ c.phone.user.get_full_name }} - {{ c.phone.plan.name }}: ${{ c.total|floatformat:0 }}
-  SMS: {{ c.sms }} (pack de mensajes: {{ c.phone.sms_pack|default_if_none:"ninguno" }})
-  Minutos: {{ c.total_min }}
-{% endfor %}
-Total a pagar: ${{ data.total|floatformat:0 }}
-{% for p in bill.penalty_set.all %}
-Este mes sobraron {{ p.minutes }} minutos para el plan {{ p.plan.name }}.
-{% endfor %}
-Podrías por favor mandarme a este email el comprobante de pago
-escaneado/fotografiado antes del 10 de este mes?
-
-Muchas gracias!
-
-Ah, y si podés mandarme un ack de que recibiste este mail, mejor.
-
-Naty.
-
-Detalles de los planes:
-
-{{ data.consumptions.0.phone.plan.description }}
-"""
 
 PLANS = (
     # ('XMD01', 2200, True), ('INTRC', 9507, False),
