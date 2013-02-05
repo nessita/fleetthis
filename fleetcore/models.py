@@ -416,6 +416,7 @@ class Consumption(models.Model):
                        'antes de multas')
     total_min = MinuteField('Suma de minutos consumidos y excedentes, '
                             'y multas')
+    total_sms = SMSField('Suma de mensajes consumidos y multas')
     total_before_taxes = MoneyField()
     taxes = TaxField()
     total_before_round = MoneyField()
@@ -432,6 +433,7 @@ class Consumption(models.Model):
     def save(self, *args, **kwargs):
         self.mins = self.included_min + self.exceeded_min
         self.total_min = self.mins + self.penalty_min
+        self.total_sms = self.sms + self.penalty_sms
 
         total = self.reported_total
         plan = self.plan
