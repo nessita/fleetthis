@@ -34,7 +34,7 @@ y cada línea aporta 100 SMS a la bolsa. Los SMS dentro de la bolsa de mensajes
 salen $ 0.07, y por afuera cada uno sale $ 0.10.
 """),
     ('TSC16', Decimal('35.00'), 129, Decimal('0.27'), 0, Decimal('0.24'),
-     False, False
+     False, False,
      """DETALLE PLAN DE PRECIO: PLAN TSC16 - Abono: $ 35.00 Pesos
 Libres en el Plan: $35.00
 Precios sin imp ni cargo ENARD Ley 26573
