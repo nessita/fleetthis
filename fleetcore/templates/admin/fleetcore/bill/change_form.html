@@ -24,9 +24,9 @@
   <tbody>
   {% for c in data.consumptions %}
   <tr class="{% cycle "row1" "row2" %}">
-    <td><a href="/admin/fleetcore/consumption/{{ c.id }}">{{ c.phone.number }}</a></td>
-    <td>{{ c.plan.name }}</td>
-    <td>{{ c.phone.user.get_full_name }}</td>
+    <td><a href="/admin/fleetcore/phone/{{ c.phone.id }}">{{ c.phone.number }}</a></td>
+    <td><a href="/admin/fleetcore/plan/{{ c.plan.id }}">{{ c.plan.name }}</a></td>
+    <td><a href="/admin/fleetcore/consumption/{{ c.id }}">{{ c.phone.user.get_full_name }}</a></td>
     <td>$ {{ c.total|floatformat:0 }}</td>
   </tr>
   {% endfor %}

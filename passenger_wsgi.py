@@ -1,9 +1,6 @@
 import os
 import sys
 
-import django.core.handlers.wsgi
-
-
 INTERP = "/home/nessita/fleetthis/env/bin/python"
 #INTERP is present twice so that the new python interpreter knows the actual executable path
 if sys.executable != INTERP:
@@ -13,19 +10,41 @@ if sys.executable != INTERP:
 sys.stdout = sys.stderr
 
 cwd = os.getcwd()
-appdir = cwd + '/fleetthis'
-sys.path.insert(0, appdir)
-sys.path.append(cwd)
-
-#cwd = os.path.abspath(os.path.dirname(__file__))
-#appdir = os.path.join(cwd, 'fleetthis')
-#if appdir not in sys.path:
-#    sys.path.insert(0, appdir)
+appdir = os.path.join(cwd, 'fleetthis')
+if appdir not in sys.path:
+    sys.path.insert(0, appdir)
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'fleetthis.settings'
 
+import django
+from django.conf import settings
 
-def application(environ, start_response):
-    #start_response('200 OK', [('Content-type', 'text/plain')])
-    #return ["Hello, world HOLA"]
-    return django.core.handlers.wsgi.WSGIHandler()
+DEBUG_OUTPUT = """Hello World!
+
+Running Python version: %s
+
+Python path is: %s
+
+Current dir is: %s
+
+App dir is: %s
+
+Django version %s, DEBUG is set to %s
+
+"""
+
+
+def debug_application(environ, start_response):
+    output = DEBUG_OUTPUT % (sys.version, sys.path, cwd, appdir,
+                             django.get_version(), settings.DEBUG)
+    response_headers = [('Content-type', 'text/plain'),
+                        ('Content-Length', str(len(output)))]
+    start_response('200 OK', response_headers)
+    return [output]
+
+
+import django.core.handlers.wsgi
+application = django.core.handlers.wsgi.WSGIHandler()
+
+##from paste.exceptions.errormiddleware import ErrorMiddleware
+##application = ErrorMiddleware(application, debug=True)
