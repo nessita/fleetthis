@@ -8,16 +8,12 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding field 'Consumption.mins'
-        db.add_column('fleetcore_consumption', 'mins',
-                      self.gf('fleetcore.fields.MinuteField')(default='0', max_digits=10, decimal_places=2),
-                      keep_default=False)
-
+        # Rename field 'Phone.plan' to 'Phone.current_plan'
+        db.rename_column('fleetcore_phone', 'plan_id', 'current_plan_id')
 
     def backwards(self, orm):
-        # Deleting field 'Consumption.mins'
-        db.delete_column('fleetcore_consumption', 'mins')
-
+        # Rename field 'Phone.current_plan' to 'Phone.plan'
+        db.rename_column('fleetcore_phone', 'current_plan_id', 'plan_id')
 
     models = {
         'auth.group': {
@@ -84,6 +80,7 @@ class Migration(SchemaMigration):
             'idl_min': ('fleetcore.fields.MinuteField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '2'}),
             'idl_min_price': ('fleetcore.fields.MoneyField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '3'}),
             'included_min': ('fleetcore.fields.MinuteField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '2'}),
+            'mins': ('fleetcore.fields.MinuteField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '2'}),
             'monthly_price': ('fleetcore.fields.MoneyField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '3'}),
             'ndl_min': ('fleetcore.fields.MinuteField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '2'}),
             'ndl_min_price': ('fleetcore.fields.MoneyField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '3'}),
@@ -104,8 +101,7 @@ class Migration(SchemaMigration):
             'total': ('fleetcore.fields.MoneyField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '3'}),
             'total_before_round': ('fleetcore.fields.MoneyField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '3'}),
             'total_before_taxes': ('fleetcore.fields.MoneyField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '3'}),
-            'total_min': ('fleetcore.fields.MinuteField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '2'}),
-            'mins': ('fleetcore.fields.MinuteField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '2'})
+            'total_min': ('fleetcore.fields.MinuteField', [], {'default': "'0'", 'max_digits': '10', 'decimal_places': '2'})
         },
         'fleetcore.datapack': {
             'Meta': {'object_name': 'DataPack'},
@@ -134,11 +130,11 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'Phone'},
             'active_since': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2013, 2, 4, 0, 0)'}),
             'active_to': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
+            'current_plan': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['fleetcore.Plan']"}),
             'data_pack': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['fleetcore.DataPack']", 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'notes': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'number': ('django.db.models.fields.PositiveIntegerField', [], {}),
-            'plan': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['fleetcore.Plan']"}),
             'sms_pack': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['fleetcore.SMSPack']", 'null': 'True', 'blank': 'True'}),
             'user': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['auth.User']", 'unique': 'True'})
         },

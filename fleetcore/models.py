@@ -199,8 +199,7 @@ class Bill(models.Model):
         # filter those consumptions with unused minutes from the plan total
         # currently, this only works the first time since total_min includes
         # penalties, if any
-        consumptions = consumptions.filter(
-            total_min_before_penalties__lt=plan_mins)
+        consumptions = consumptions.filter(mins__lt=plan_mins)
 
         amount = consumptions.count()
         if amount == 0:
@@ -208,7 +207,7 @@ class Bill(models.Model):
                             penalty)
         elif amount == 1:
             c = consumptions.get()
-            assert c.total_min_before_penalties + penalty_min <= plan_mins
+            assert c.mins + penalty_min <= plan_mins
             c.penalty_min = penalty_min
             c.save()
         else:
@@ -246,14 +245,6 @@ class Bill(models.Model):
                                       d[PHONE_NUMBER])
 
             plan = None
-            # always try to use the plan from the previous invoice, if present
-            try:
-                c = Consumption.objects.filter(phone=phone).latest()
-            except Consumption.DoesNotExist:
-                logging.warning('No previous consumption for %s', phone)
-            else:
-                plan = c.plan
-
             if not plan:
                 if not d[PLAN]:
                     # this phone is disappearing, so there should be a previous
@@ -372,7 +363,7 @@ class Phone(models.Model):
     """Phone line."""
     number = models.PositiveIntegerField()
     user = models.OneToOneField(User)
-    plan = models.ForeignKey(Plan)
+    current_plan = models.ForeignKey(Plan)
     data_pack = models.ForeignKey(DataPack, blank=True, null=True)
     sms_pack = models.ForeignKey(SMSPack, blank=True, null=True)
     notes = models.TextField(blank=True)
@@ -421,8 +412,8 @@ class Consumption(models.Model):
     # calculated *and* stored in the DB
     penalty_min = MinuteField('Multa de minutos')
     penalty_sms = SMSField('Multa de mensajes')
-    total_min_before_penalties = MinuteField('Suma de minutos consumidos y '
-                                             'excedentes, antes de multas')
+    mins = MinuteField('Suma de minutos consumidos y excedentes, '
+                       'antes de multas')
     total_min = MinuteField('Suma de minutos consumidos y excedentes, '
                             'y multas')
     total_before_taxes = MoneyField()
@@ -439,8 +430,8 @@ class Consumption(models.Model):
                                                  self.phone)
 
     def save(self, *args, **kwargs):
-        self.total_min_before_penalties = self.included_min + self.exceeded_min
-        self.total_min = self.total_min_before_penalties + self.penalty_min
+        self.mins = self.included_min + self.exceeded_min
+        self.total_min = self.mins + self.penalty_min
 
         total = self.reported_total
         plan = self.plan

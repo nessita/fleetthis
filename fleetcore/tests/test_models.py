@@ -122,7 +122,8 @@ class ParseInvoiceTestCase(BillTestCase):
     def _make_phone(self, plan, number):
         plan = Plan.objects.create(name=plan)
         user = User.objects.create(username=number)
-        return Phone.objects.create(number=number, plan=plan, user=user)
+        return Phone.objects.create(number=number, current_plan=plan,
+                                    user=user)
 
     def assert_no_data_processed(self, pdf_parser_called=False):
         if pdf_parser_called:
@@ -245,34 +246,6 @@ class ParseInvoiceTestCase(BillTestCase):
         for d in PDF_PARSED_SAMPLE['phone_data']:
             self.assert_consumption_processed(data=d)
 
-        for c in Consumption.objects.filter(bill=self.obj):
-            # warning about not having previous consumptions
-            calls = call('No previous consumption for %s', c.phone)
-        self.mock_logging.warning.assert_has_calls(calls)
-
-    def test_uses_plan_from_previous_period(self):
-        self.test_successful_parsing()
-        # parse new data where the plan changed for a given phone
-        next_sample = deepcopy(PDF_PARSED_SAMPLE)
-
-        old_plan_name = next_sample['phone_data'][0][2]
-        old_plan = Plan.objects.get(name=old_plan_name)
-
-        new_plan_name = 'FOO23'
-        new_plan = Plan.objects.create(name=new_plan_name)
-
-        next_sample['phone_data'][0][2] = new_plan_name
-        self.mock_pdf_parser.return_value = next_sample
-
-        next_bill = self.factory.make_bill(fleet=self.obj.fleet)
-        next_bill.parse_invoice()
-        data = next_sample['phone_data']
-        # first phone changed plan, so assert is using the old plan
-        self.assert_consumption_processed(data=data[0], bill=next_bill,
-                                          real_plan=old_plan)
-        # second phone DID NOT changed plan, so plan is the same
-        self.assert_consumption_processed(data=data[1], bill=next_bill)
-
     def test_do_not_parse_twice(self):
         self.test_successful_parsing()
         self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
@@ -301,7 +274,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
 
     def _make_consumption(self, plan, phone_number, bill=None):
         phone = Phone.objects.create(
-            number=phone_number, plan=plan,
+            number=phone_number, current_plan=plan,
             user=User.objects.create(username=str(phone_number)),
         )
         if bill is None:
@@ -471,27 +444,27 @@ class ConsumptionTestCase(BaseModelTestCase):
 
     model = Consumption
 
-    def test_total_min_before_penalties(self):
-        self.assertEqual(self.obj.total_min_before_penalties, 0)
+    def test_mins(self):
+        self.assertEqual(self.obj.mins, 0)
 
-    def test_total_min_before_penalties_is_set_on_save(self):
+    def test_mins_is_set_on_save(self):
         for i, j, k in itertools.product([0, 13], repeat=3):
             self.obj.included_min = i
             self.obj.exceeded_min = j
             self.obj.penalty_min = k
 
             self.obj.save()
-            self.assertEqual(self.obj.total_min_before_penalties, i + j)
+            self.assertEqual(self.obj.mins, i + j)
 
-    def test_wrong_total_min_before_penalties_is_corrected_on_save(self):
+    def test_wrong_mins_is_corrected_on_save(self):
         for i, j, k in itertools.product([0, 19], repeat=3):
             self.obj.included_min = i
             self.obj.exceeded_min = j
             self.obj.penalty_min = k
-            self.obj.total_min_before_penalties = (i + j) / 2
+            self.obj.mins = (i + j) / 2
 
             self.obj.save()
-            self.assertEqual(self.obj.total_min_before_penalties, i + j)
+            self.assertEqual(self.obj.mins, i + j)
 
     def test_total_min(self):
         self.assertEqual(self.obj.total_min, 0)

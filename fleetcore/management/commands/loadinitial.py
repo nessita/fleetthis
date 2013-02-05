@@ -19,9 +19,10 @@ with open(os.path.join(os.path.dirname(__file__), 'report_template.txt')) as f:
 
 PLANS = (
     # ('XMD01', 2200, True), ('INTRC', 9507, False),
-    ('', Decimal('0'), 0, Decimal('0'), 0, Decimal('0'), "DUMMY PLAN."),
+    ('', Decimal('0'), 0, Decimal('0'), 0, Decimal('0'), False, False,
+     "DUMMY PLAN."),
     ('TCM07', Decimal('35.00'), 127,
-     Decimal('0.22'), 100, Decimal('0.07'),
+     Decimal('0.22'), 100, Decimal('0.07'), True, True,
      """DETALLE PLAN DE PRECIO: PLAN TCM07 - Abono: $ 35.00 Pesos
 Libres en el Plan:$ 35.00
 Precios sin imp ni cargo ENARD Ley 26573
@@ -32,8 +33,8 @@ Los SMS hacen clearing con el resto de las líneas en el mismo plan,
 y cada línea aporta 100 SMS a la bolsa. Los SMS dentro de la bolsa de mensajes
 salen $ 0.07, y por afuera cada uno sale $ 0.10.
 """),
-    ('TSC16', Decimal('35.00'), 129, Decimal('0.27'), 0,
-     Decimal('0.24'),
+    ('TSC16', Decimal('35.00'), 129, Decimal('0.27'), 0, Decimal('0.24'),
+     False, False
      """DETALLE PLAN DE PRECIO: PLAN TSC16 - Abono: $ 35.00 Pesos
 Libres en el Plan: $35.00
 Precios sin imp ni cargo ENARD Ley 26573
@@ -43,6 +44,7 @@ Min. destino a móviles: $0.27 $ 0.27
 Los SMS no están incluídos en el abono, cada uno sale $ 0.24.
 """),
     ('TCL16', Decimal('35.00'), 129, Decimal('0.27'), 0, Decimal('0.24'),
+     True, False,
      """DETALLE PLAN DE PRECIO: PLAN TCL16 - Abono: $ 35.00 Pesos
 Libres en el Plan:$ 35.00
 Precios sin imp ni cargo ENARD Ley 26573
@@ -158,6 +160,7 @@ class Command(BaseCommand):
             plans[i] = Plan.objects.create(
                 name=i, price=j, included_min=mins, price_min=price_min,
                 included_sms=sms, price_sms=price_sms, description=desc,
+                with_min_clearing=min_clering, with_sms_clearing=sms_clearing,
             )
 
         tcl16 = plans['TCL16']

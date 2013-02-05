@@ -76,7 +76,7 @@ class Factory(object):
 
     def make_phone(self, **kwargs):
         default = dict(number=self.make_random_number(),
-                       user=self.make_user(), plan=self.make_plan())
+                       user=self.make_user(), current_plan=self.make_plan())
         return self.make_something(Phone, default, **kwargs)
 
     def make_consumption(self, **kwargs):

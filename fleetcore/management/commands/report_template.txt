@@ -22,4 +22,4 @@ Naty.
 
 Detalles de los planes:
 
-{{ data.consumptions.0.phone.plan.description }}
+{{ data.consumptions.0.plan.description }}
