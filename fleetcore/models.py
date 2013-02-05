@@ -149,22 +149,7 @@ class Bill(models.Model):
     def __unicode__(self):
         return 'Bill "%s" (date: %s)' % (self.fleet, self.billing_date)
 
-    def _apply_penalty(self, consumptions, penalty_min, plan_mins):
-        assert penalty_min > 0 and consumptions.count() > 1
-
-        # prioritize readable code over efficient code
-        data = defaultdict(list)
-        for c in consumptions:
-            # group by used minutes
-            data[c.total_min].append(c)
-
-        # need to add an extra key for the plan total, so when building
-        # the pairwise generator, the last total has an entry of its own
-        # Example: if we have consumptions to apply penalty to of
-        # 30, 50, 80 and the plan target is 100, we need the following pairs:
-        # [(30, 50), (50, 80), (80, 100)]
-        data[plan_mins].append(None)
-
+    def _apply_partial_penalty(self, data, penalty, attr_name, attr_total):
         # sort ascending
         totals = pairwise(sorted(data.iterkeys()))
         for total1, total2 in totals:
@@ -175,16 +160,16 @@ class Bill(models.Model):
             diff = total2 - total1
             assert diff > 0  # because the key are ascendingly sorted
 
-            to_apply = min(diff * len_cons, penalty_min)
-            penalty_min -= to_apply
+            to_apply = min(diff * len_cons, penalty)
+            penalty -= to_apply
 
             to_apply = to_apply / len_cons
             for c in cons:
-                c.penalty_min = c.penalty_min + to_apply
+                setattr(c, attr_name, c.penalty_min + to_apply)
                 c.save()
-                assert penalty_min == 0 or c.total_min == total2
+                assert penalty == 0 or getattr(c, attr_total) == total2
 
-            if penalty_min > 0:
+            if penalty > 0:
                 # update data
                 data[total2].extend(cons)
             else:
@@ -192,26 +177,33 @@ class Bill(models.Model):
                 return
 
     def apply_penalty(self, consumptions, penalty):
-        plan_mins = penalty.plan.included_min
-        penalty_min = penalty.minutes
-        assert penalty_min > 0 and plan_mins > 0
+        assert ((penalty.minutes > 0 and penalty.plan.included_min > 0) or
+                (penalty.sms > 0 and penalty.plan.included_sms > 0))
 
-        # filter those consumptions with unused minutes from the plan total
-        # currently, this only works the first time since total_min includes
-        # penalties, if any
-        consumptions = consumptions.filter(mins__lt=plan_mins)
-
-        amount = consumptions.count()
-        if amount == 0:
+        if consumptions.count() == 0:
             logging.warning('There is no consumption to apply the %s to.',
                             penalty)
-        elif amount == 1:
-            c = consumptions.get()
-            assert c.mins + penalty_min <= plan_mins
-            c.penalty_min = penalty_min
-            c.save()
-        else:
-            self._apply_penalty(consumptions, penalty_min, plan_mins)
+            return
+
+        # prioritize readable code over efficient code
+        data_min = defaultdict(list)
+        data_sms = defaultdict(list)
+        for c in consumptions:
+            data_min[c.mins].append(c)  # group by used minutes
+            data_sms[c.sms].append(c)  # group by used sms
+
+        # need to add an extra key for the plan total, so when building
+        # the pairwise generator, the last total has an entry of its own
+        # Example: if we have consumptions to apply penalty to of
+        # 30, 50, 80 and the plan target is 100, we need the following pairs:
+        # [(30, 50), (50, 80), (80, 100)]
+        data_min[penalty.plan.included_min].append(None)
+        data_sms[penalty.plan.included_sms].append(None)
+
+        self._apply_partial_penalty(
+            data_min, penalty.minutes, 'penalty_min', 'total_min')
+        self._apply_partial_penalty(
+            data_sms, penalty.sms, 'penalty_sms', 'total_sms')
 
     @transaction.commit_on_success
     def parse_invoice(self):
@@ -308,19 +300,28 @@ class Bill(models.Model):
                              self, plan)
                 continue
 
-            target = plan.included_min * consumptions.count()
-            cons = consumptions.aggregate(included=Sum('included_min'),
-                                          exceeded=Sum('exceeded_min'))
-            real = cons['included'] + cons['exceeded']
-            if real < target:
-                penalty = Penalty.objects.create(bill=self, plan=plan,
-                                                 minutes=target - real)
+            # remove existing penalties if any, we may be recalculating
+            consumptions.update(penalty_min=0, penalty_sms=0)
+
+            diff_min = 0
+            if plan.with_min_clearing:
+                # decide if penalty for mins is needed
+                target = plan.included_min * consumptions.count()
+                real = consumptions.aggregate(mins=Sum('mins'))['mins']
+                diff_min = max(target - real, 0)
+
+            diff_sms = 0
+            if plan.with_sms_clearing:
+                # decide if penalty for sms is needed
+                target = plan.included_sms * consumptions.count()
+                real = consumptions.aggregate(sms=Sum('sms'))['sms']
+                diff_sms = max(target - real, 0)
+
+            # apply newly calculated penalties
+            if diff_min > 0 or diff_sms > 0:
+                penalty = Penalty.objects.create(
+                    bill=self, plan=plan, minutes=diff_min, sms=diff_sms)
                 self.apply_penalty(consumptions, penalty)
-            else:
-                # remove existing penalties if any, we may be recalculating
-                for c in consumptions:
-                    c.penalty_min = 0
-                    c.save()
 
 
 class Plan(models.Model):
