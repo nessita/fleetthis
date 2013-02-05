@@ -156,11 +156,12 @@ class Command(BaseCommand):
             SMSPack.objects.create(units=sms, price=price)
 
         plans = {}
-        for i, j, mins, price_min, sms, price_sms, desc in PLANS:
+        for (i, j, mins, price_min, sms, price_sms, min_clearing, sms_clearing,
+             desc) in PLANS:
             plans[i] = Plan.objects.create(
                 name=i, price=j, included_min=mins, price_min=price_min,
                 included_sms=sms, price_sms=price_sms, description=desc,
-                with_min_clearing=min_clering, with_sms_clearing=sms_clearing,
+                with_min_clearing=min_clearing, with_sms_clearing=sms_clearing,
             )
 
         tcl16 = plans['TCL16']
@@ -176,7 +177,7 @@ class Command(BaseCommand):
             profile.save()
 
             p = Phone.objects.create(number=number, user=user,
-                                     notes='', plan=tcl16)
+                                     notes='', current_plan=tcl16)
 
             if number in DATA_PACKS_BINDING:
                 price = DATA_PACKS_BINDING[number]
