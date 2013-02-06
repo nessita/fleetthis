@@ -63,7 +63,9 @@ function consumption_chart(container_id, title, data, penalties) {
             }
         }], {
             legend: {
-                    backgroundColor: "#D2E8FF"
+                backgroundColor: "#D2E8FF",
+                backgroundOpacity: 0.25,
+                position: 'sw'
             },
             title: title,
             colors: ['#357703', '#D50606'],

@@ -1,3 +1,7 @@
+body {
+    padding-top: 40px;
+}
+
 .chart {
     width : 400px;
     height: 300px;

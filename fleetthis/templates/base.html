@@ -8,8 +8,8 @@
         <title>{% block html-title %}fleetthis{% endblock %}</title>
 
         <link rel="stylesheet" href="{{ STATIC_URL }}css/bootstrap.min.css" />
-        <link href="{{ STATIC_URL }}css/bootstrap-responsive.min.css" rel="stylesheet">
         <link rel="stylesheet" href="{{ STATIC_URL }}css/fleetthis.css" />
+        <link href="{{ STATIC_URL }}css/bootstrap-responsive.min.css" rel="stylesheet">
         <script type="text/javascript" src="{{ STATIC_URL }}js/jquery-1.8.2.min.js"></script>
         {% block extra-head %}
         {% endblock %}
@@ -17,23 +17,22 @@
     </head>
 
     <body>
-        <div class="navbar navbar-inverse navbar-fixed-top">
-            <div class="navbar-inner">
-                <div class="container">
-                    <a class="brand" href="/">Fleetthis</a>
-                    <div>
-                        <ul class="nav">
-                            {% block navbar-left-menu %}{% endblock %}
-                        </ul>
-                        <ul class="nav pull-right">
-                            {% block navbar-right-menu %}{% endblock %}
-                        </ul>
+        <div class="container-fluid">
+            <div class="navbar navbar-inverse navbar-fixed-top">
+                <div class="navbar-inner">
+                    <div class="container">
+                        <a class="brand" href="/">Fleetthis</a>
+                        <div>
+                            <ul class="nav">
+                                {% block navbar-left-menu %}{% endblock %}
+                            </ul>
+                            <ul class="nav pull-right">
+                                {% block navbar-right-menu %}{% endblock %}
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="container-fluid">
             <div class="row-fluid">
                 <div class="span2">
                     {% block sidebar %}
