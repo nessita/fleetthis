@@ -9,4 +9,5 @@ from django.conf.urls import patterns, include, url
 urlpatterns = patterns(
     'fleetcore.views',
     #url(r'^$', 'home', name='home'),
+    url(r'^history/$', 'consumption_history', name='consumption-history'),
 )

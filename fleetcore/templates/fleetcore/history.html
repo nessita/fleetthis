@@ -1,0 +1,32 @@
+{% extends 'fleetcore/base.html' %}
+
+{% block html-title %}History - {{ block.super }}{% endblock %}
+
+{% block content %}
+    <h1>{{ user.get_full_name }} <small><a href="{% url home %}">[back]</a></small></h1>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Minutes</th>
+                <th>SMS</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in consumptions %}
+                <tr>
+                    <td>{{ c.bill.billing_date|date:"M Y" }}</td>
+                    <td>{{ c.used_min }}
+                        {% if c.penalty_min %}(+{{ c.penalty_min }}){% endif %}
+                    </td>
+                    <td>{{ c.sms }}
+                        {% if c.penalty_sms %}(+{{ c.penalty_sms }}){% endif %}</td>
+                    <td>${{ c.reported_total|floatformat:'2' }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+

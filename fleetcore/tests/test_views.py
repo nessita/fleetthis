@@ -45,7 +45,7 @@ class AuthenticatedHomePageTestCase(BaseViewTestCase):
         response = self.client.get(reverse('home'))
         self.assertContains(response,
                             '<a href="%s">Logout</a>' % reverse('logout'))
-        self.assertTemplateUsed(response, 'index.html')
+        self.assertTemplateUsed(response, 'fleetcore/index.html')
 
     def test_link_to_admin_if_not_superuser(self):
         assert not self.user.is_superuser
