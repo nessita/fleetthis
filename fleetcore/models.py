@@ -449,6 +449,11 @@ class Consumption(models.Model):
         self.total = round(self.total_before_round)
         super(Consumption, self).save(*args, **kwargs)
 
+    @property
+    def used_min(self):
+        """Return the really consumed minutes: included + exceeded."""
+        return self.included_min + self.exceeded_min
+
     class Meta:
         ordering = ('phone',)
         get_latest_by = 'bill__billing_date'
