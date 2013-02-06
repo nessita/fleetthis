@@ -74,13 +74,15 @@ class Factory(object):
         default = dict(units=self.make_random_number())
         return self.make_something(SMSPack, default, **kwargs)
 
-    def make_phone(self, **kwargs):
+    def make_phone(self, user=None, **kwargs):
+        user = user if user is not None else self.make_user()
         default = dict(number=self.make_random_number(),
-                       user=self.make_user(), current_plan=self.make_plan())
+                       user=user, current_plan=self.make_plan())
         return self.make_something(Phone, default, **kwargs)
 
-    def make_consumption(self, **kwargs):
-        default = dict(bill=self.make_bill(), phone=self.make_phone(),
+    def make_consumption(self, user=None, **kwargs):
+        default = dict(bill=self.make_bill(),
+                       phone=self.make_phone(user=user),
                        plan=self.make_plan())
         return self.make_something(Consumption, default, **kwargs)
 

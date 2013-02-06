@@ -472,6 +472,16 @@ class ConsumptionTestCase(BaseModelTestCase):
     def test_mins(self):
         self.assertEqual(self.obj.mins, 0)
 
+    def test_used_min(self):
+        for i, j, k in itertools.product([0, 13], repeat=3):
+            self.obj.included_min = i
+            self.obj.exceeded_min = j
+            self.obj.penalty_min = k
+
+            self.obj.save()
+            self.assertEqual(self.obj.used_min,
+                             self.obj.included_min + self.obj.exceeded_min)
+
     def test_mins_is_set_on_save(self):
         for i, j, k in itertools.product([0, 13], repeat=3):
             self.obj.included_min = i

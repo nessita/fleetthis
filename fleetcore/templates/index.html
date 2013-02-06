@@ -2,6 +2,31 @@
 
 {% block html-title %}Home - {{ block.super }}{% endblock %}
 
+{% block extra-head %}
+    <link rel="stylesheet" href="{{ STATIC_URL }}css/fleetthis.css" />
+    <script type="text/javascript" src="{{ STATIC_URL }}js/flotr2.min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}js/charts.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var container_id = 'minutes';
+            var d1 = [], d2 = [];
+            {% for consumption in consumptions %}
+                d1.push([{{ consumption.bill.billing_date.month }}, {{ consumption.used_min }}]);
+                d2.push([{{ consumption.bill.billing_date.month }}, {{ consumption.penalty_min }}]);
+            {% endfor %}
+            consumption_chart(container_id, 'Minutes', d1, d2);
+
+            var container_id = 'sms';
+            var d1 = [], d2 = [];
+            {% for consumption in consumptions %}
+                d1.push([{{ consumption.bill.billing_date.month }}, {{ consumption.sms }}]);
+                d2.push([{{ consumption.bill.billing_date.month }}, {{ consumption.penalty_sms }}]);
+            {% endfor %}
+            consumption_chart(container_id, 'SMS', d1, d2);
+        });
+    </script>
+{% endblock %}
+
 {% block navbar-right-menu %}
     {% if user.is_superuser %}
         <li><a href="{% url admin:index %}">Admin</a></li>
@@ -19,7 +44,7 @@
         <dt>Phone Number</dt>
         <dd>{{ user.phone.number }}</dd>
         <dt>Plan</dt>
-        <dd>{{ user.phone.plan }}</dd>
+        <dd>{{ user.phone.current_plan }}</dd>
         {% if user.phone.data_pack %}
             <dt>Data pack</dt>
             <dd>{{ user.phone.data_pack }}</dd>
@@ -42,5 +67,28 @@
         {% endfor %}
     </ul>
     {% endif %}
+    
+    {% if consumptions %}
+    <h4>Last consumption</h4>
+    <dl class="dl-horizontal">
+        <dt>Date</dt>
+        <dd>{{ consumptions.0.bill.billing_date|date:"M Y" }}</dd>
+        <dt>Minutes</dt>
+        <dd>{{ consumptions.0.used_min }}
+            {% if consumptions.0.penalty_min %}(+{{ consumptions.0.penalty_min }}){% endif %}
+        </dd>
+        <dt>SMS</dt>
+        <dd>{{ consumptions.0.sms }}
+            {% if consumptions.0.penalty_sms %}(+{{ consumptions.0.penalty_sms }}){% endif %}
+        </dd>
+        <dt>Total</dt>
+        <dd>${{ consumptions.0.reported_total|floatformat:'2' }}<dd>
+    </dl>
+    {% endif %}
+
+    <h4>Last 12-month stats</h4>
+    <div id="minutes" class="chart"></div>
+    <div id="sms" class="chart"></div>
 
 {% endblock %}
+

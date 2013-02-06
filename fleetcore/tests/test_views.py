@@ -9,6 +9,7 @@ from django.test import TestCase
 from mock import patch
 
 import fleetcore
+from fleetcore.tests.factory import Factory
 
 
 class BaseViewTestCase(TestCase):
@@ -22,17 +23,22 @@ class BaseViewTestCase(TestCase):
         self.user = User.objects.create_user(username=self.username,
                                              password=self.password)
 
+
+class AnonymousTestCase(BaseViewTestCase):
+    """The test suite for the home view as anonymous user."""
+
     def test_home(self):
         response = self.client.get(reverse('home'))
         expected = reverse('login') + '?next=' + reverse('home')
         self.assertRedirects(response, expected)
 
 
-class AuthenticatedTestCase(BaseViewTestCase):
-    """The test suite for the home view."""
+class AuthenticatedHomePageTestCase(BaseViewTestCase):
+    """The test suite for the home view as authenticated user."""
 
     def setUp(self):
-        super(AuthenticatedTestCase, self).setUp()
+        super(AuthenticatedHomePageTestCase, self).setUp()
+        self.factory = Factory()
         self.client.login(username=self.username, password=self.password)
 
     def test_home(self):
@@ -53,3 +59,13 @@ class AuthenticatedTestCase(BaseViewTestCase):
 
         response = self.client.get(reverse('home'))
         self.assertContains(response, reverse('admin:index'))
+
+    def test_homepage_recent_consumptions(self):
+        consumption = self.factory.make_consumption(user=self.user)
+        another_consumption = self.factory.make_consumption()
+
+        response = self.client.get(reverse('home'))
+        self.assertIn('consumptions', response.context)
+        consumptions = response.context['consumptions']
+        self.assertEqual(consumptions.count(), 1)
+        self.assertEqual(consumptions[0], consumption)
