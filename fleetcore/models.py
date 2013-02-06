@@ -153,7 +153,7 @@ class Bill(models.Model):
         # sort ascending
         totals = pairwise(sorted(data.iterkeys()))
         for total1, total2 in totals:
-            # distribute penalty minutes within the same category
+            # distribute penalty within the same category
             cons = data[total1]
             len_cons = len(cons)
 
@@ -163,18 +163,24 @@ class Bill(models.Model):
             to_apply = min(diff * len_cons, penalty)
             penalty -= to_apply
 
-            to_apply = to_apply / len_cons
+            to_apply = Decimal(to_apply / len_cons)
             for c in cons:
-                setattr(c, attr_name, c.penalty_min + to_apply)
-                c.save()
-                assert penalty == 0 or getattr(c, attr_total) == total2
+                current = getattr(c, attr_name)
+                setattr(c, attr_name, current + to_apply)
+                ##assert penalty == 0 or getattr(c, attr_total) == total2
 
             if penalty > 0:
                 # update data
+                data.pop(total1)
                 data[total2].extend(cons)
             else:
-                # penalty was fully applied
-                return
+                break
+
+        # penalty was fully applied, save all consumptions
+        for consumptions in data.itervalues():
+            for c in consumptions:
+                if c is not None:
+                    c.save()
 
     def apply_penalty(self, consumptions, penalty):
         assert ((penalty.minutes > 0 and penalty.plan.included_min > 0) or
@@ -286,8 +292,7 @@ class Bill(models.Model):
             raise Bill.AdjustmentError('Bill must be parsed before making '
                                        'adjustments.')
 
-        plans = Plan.objects.filter(consumption__bill=self,
-                                    with_min_clearing=True).distinct()
+        plans = Plan.objects.filter(consumption__bill=self).distinct()
         for plan in plans:
             if Penalty.objects.filter(bill=self, plan=plan).count() > 0:
                 logging.warning('Penalty for "%s" and "%s" already exists, '
@@ -438,12 +443,13 @@ class Consumption(models.Model):
 
         total = self.reported_total
         plan = self.plan
-        if plan.with_min_clearing:
+        if plan.with_min_clearing or plan.with_sms_clearing:
             total -= self.monthly_price
-            # do not use <total_min since it includes the exceeded_min
+            # do not use total_min since it includes the exceeded_min
             total += (self.included_min + self.penalty_min) * plan.price_min
-        else:
-            total = self.monthly_price
+            # calculate real amount of sms to be charged for
+            sms = min(self.sms, self.plan.included_sms)
+            total += (sms + self.penalty_sms) * plan.price_sms
 
         self.total_before_taxes = total
         self.taxes = self.bill.taxes
