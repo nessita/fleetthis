@@ -142,6 +142,7 @@ class ConsumptionAdmin(admin.ModelAdmin):
         }),
         ('Totals', {
             'fields': (('penalty_min', 'total_min'),
+                       ('penalty_sms', 'total_sms'),
                        'total_before_taxes', 'taxes', 'total_before_round',
                        ('total', 'payed'),)
         }),
@@ -150,7 +151,7 @@ class ConsumptionAdmin(admin.ModelAdmin):
             'fields': (
                 ('reported_user', 'reported_plan', 'monthly_price'),
                 ('services', 'refunds'),
-                ('included_min',),
+                ('included_min', 'mins'),
                 ('exceeded_min', 'exceeded_min_price'),
                 ('ndl_min', 'ndl_min_price'),
                 ('idl_min', 'idl_min_price'), ('sms', 'sms_price'),
