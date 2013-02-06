@@ -301,7 +301,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
 
         self.assert_no_penalties()
 
-    def test_with_data_no_min_clearing_less_minutes(self):
+    def test_no_min_clearing_less_minutes(self):
         self.plan1.with_min_clearing = False
         self.plan1.included_min = 100
         self.plan1.save()
@@ -318,7 +318,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
             self.assertEqual(c.penalty_min, 0)
             self.assertEqual(c.penalty_sms, 0)
 
-    def test_with_data_no_min_clearing_more_minutes(self):
+    def test_no_min_clearing_more_minutes(self):
         self.plan1.with_min_clearing = False
         self.plan1.included_min = 100
         self.plan1.save()
@@ -336,7 +336,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
             self.assertEqual(c.penalty_min, 0)
             self.assertEqual(c.penalty_sms, 0)
 
-    def test_with_data_with_min_clearing_all_minutes_used(self):
+    def test_with_min_clearing_all_minutes_used(self):
         assert self.plan1.with_min_clearing
         self.plan1.included_min = 100
         self.plan1.save()
@@ -348,8 +348,8 @@ class CalculatePenaltiesTestCase(BillTestCase):
         self.obj.calculate_penalties()
         self.assert_no_penalties()
 
-    def test_with_data_with_min_clearing_minutes_left(self):
-        self.plan1.with_min_clearing = True
+    def test_with_min_clearing_minutes_left(self):
+        assert self.plan1.with_min_clearing
         self.plan1.included_min = 100
         self.plan1.save()
 
@@ -379,7 +379,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
         self.assertEqual(penalty.sms, 0)
 
     def test_with_more_plans(self):
-        self.test_with_data_with_min_clearing_minutes_left()
+        self.test_with_min_clearing_minutes_left()
 
         plan2 = Plan.objects.create(name='PLAN2', included_min=333)
         c = self._make_consumption(plan2, 1987654320)
@@ -422,7 +422,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
         self.assert_no_penalties()
 
     def test_penalties_applied(self):
-        self.test_with_data_with_min_clearing_minutes_left()
+        self.test_with_min_clearing_minutes_left()
         c1, c2, c3 = Consumption.objects.filter(plan=self.plan1)
         # c1 has 50 used mins, and c2 has 80
         # penalty to apply is 50 minutes, so c1 should end up with
@@ -437,6 +437,31 @@ class CalculatePenaltiesTestCase(BillTestCase):
 
         self.assertEqual(c3.penalty_min, 0)
         self.assertEqual(c3.penalty_sms, 0)
+
+    def test_single_consumption(self):
+        c, c2, c3 = Consumption.objects.all()
+        c2.delete()
+        c3.delete()
+
+        assert Consumption.objects.all().count() == 1
+        assert self.plan1.with_min_clearing
+        assert c.plan == self.plan1
+
+        c.included_min = self.plan1.included_min
+        c.save()
+
+        self.obj.calculate_penalties()
+        self.assert_no_penalties()
+
+        half = self.plan1.included_min / 2
+        c.included_min = half
+        c.save()
+
+        self.obj.calculate_penalties()
+
+        # reload c from the db
+        c = Consumption.objects.get(id=c.id)
+        self.assertEqual(c.penalty_min, half)
 
 
 class ConsumptionTestCase(BaseModelTestCase):
@@ -497,6 +522,26 @@ class ConsumptionTestCase(BaseModelTestCase):
 
             self.obj.save()
             self.assertEqual(self.obj.total_min, i + j + k)
+
+    def test_total_sms(self):
+        self.assertEqual(self.obj.total_sms, 0)
+
+    def test_total_sms_is_set_on_save(self):
+        for i, k in itertools.product([0, 13], repeat=2):
+            self.obj.sms = i
+            self.obj.penalty_sms = k
+
+            self.obj.save()
+            self.assertEqual(self.obj.total_sms, i + k)
+
+    def test_wrong_total_sms_is_corrected_on_save(self):
+        for i, k in itertools.product([0, 19], repeat=2):
+            self.obj.sms = i
+            self.obj.penalty_sms = k
+            self.obj.total_sms = (i + k) / 2
+
+            self.obj.save()
+            self.assertEqual(self.obj.total_sms, i + k)
 
 
 class PhoneTestCase(BaseModelTestCase):
