@@ -155,16 +155,23 @@ class Bill(models.Model):
         for total1, total2 in totals:
             # distribute penalty within the same category
             cons = data[total1]
-            len_cons = len(cons)
+            len_cons = Decimal(len(cons))
 
             diff = total2 - total1
             assert diff > 0  # because the key are ascendingly sorted
 
             to_apply = min(diff * len_cons, penalty)
+            if to_apply == 0:
+                logging.warning('Can not apply a 0 value as penalty.')
+                msg = 'Penalty should be 0 by now, got %s instead'
+                assert penalty == 0, msg % penalty
+
             penalty -= to_apply
 
             to_apply = Decimal(to_apply / len_cons)
+            assert to_apply > 0
             for c in cons:
+                assert c is not None
                 current = getattr(c, attr_name)
                 setattr(c, attr_name, current + to_apply)
                 ##assert penalty == 0 or getattr(c, attr_total) == total2
@@ -448,8 +455,8 @@ class Consumption(models.Model):
             # do not use total_min since it includes the exceeded_min
             total += (self.included_min + self.penalty_min) * plan.price_min
             # calculate real amount of sms to be charged for
-            sms = min(self.sms, self.plan.included_sms)
-            total += (sms + self.penalty_sms) * plan.price_sms
+            total += (self.sms + self.penalty_sms) * plan.price_sms
+            total -= self.sms_price
 
         self.total_before_taxes = total
         self.taxes = self.bill.taxes
