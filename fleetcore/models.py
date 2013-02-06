@@ -202,16 +202,19 @@ class Bill(models.Model):
         data_min = defaultdict(list)
         data_sms = defaultdict(list)
         for c in consumptions:
-            data_min[c.mins].append(c)  # group by used minutes
-            data_sms[c.sms].append(c)  # group by used sms
+            if c.mins < c.plan.included_min:
+                data_min[c.mins].append(c)  # group by used minutes
+
+            if c.sms < c.plan.included_sms:
+                data_sms[c.sms].append(c)  # group by used sms
 
         # need to add an extra key for the plan total, so when building
         # the pairwise generator, the last total has an entry of its own
         # Example: if we have consumptions to apply penalty to of
         # 30, 50, 80 and the plan target is 100, we need the following pairs:
         # [(30, 50), (50, 80), (80, 100)]
-        data_min[penalty.plan.included_min].append(None)
-        data_sms[penalty.plan.included_sms].append(None)
+        data_min[Decimal(penalty.plan.included_min)].append(None)
+        data_sms[Decimal(penalty.plan.included_sms)].append(None)
 
         self._apply_partial_penalty(
             data_min, penalty.minutes, 'penalty_min', 'total_min')
@@ -346,7 +349,6 @@ class Plan(models.Model):
     included_sms = models.PositiveIntegerField(default=0)
     description = models.TextField(blank=True)
     with_min_clearing = models.BooleanField(default=True)
-    # SMS clearing: unused and untested -- for completeness sake
     with_sms_clearing = models.BooleanField(default=False)
 
     def __unicode__(self):
@@ -427,9 +429,6 @@ class Consumption(models.Model):
     penalty_sms = SMSField('Multa de mensajes')
     mins = MinuteField('Suma de minutos consumidos y excedentes, '
                        'antes de multas')
-    total_min = MinuteField('Suma de minutos consumidos y excedentes, '
-                            'y multas')
-    total_sms = SMSField('Suma de mensajes consumidos y multas')
     total_before_taxes = MoneyField()
     taxes = TaxField()
     total_before_round = MoneyField()
@@ -443,20 +442,30 @@ class Consumption(models.Model):
                                                  self.bill.billing_date,
                                                  self.phone)
 
+    @property
+    def total_min(self):
+        """Suma de minutos consumidos y excedentes, y multas."""
+        return self.mins + self.penalty_min
+
+    @property
+    def total_sms(self):
+        """Suma de mensajes consumidos y multas."""
+        return self.sms + self.penalty_sms
+
     def save(self, *args, **kwargs):
         self.mins = self.included_min + self.exceeded_min
-        self.total_min = self.mins + self.penalty_min
-        self.total_sms = self.sms + self.penalty_sms
 
         total = self.reported_total
         plan = self.plan
-        if plan.with_min_clearing or plan.with_sms_clearing:
+        if plan.with_min_clearing:
             total -= self.monthly_price
             # do not use total_min since it includes the exceeded_min
             total += (self.included_min + self.penalty_min) * plan.price_min
-            # calculate real amount of sms to be charged for
-            total += (self.sms + self.penalty_sms) * plan.price_sms
-            total -= self.sms_price
+
+            if plan.with_sms_clearing:
+                # calculate real amount of sms to be charged for
+                total += (self.sms + self.penalty_sms) * plan.price_sms
+                total -= self.sms_price
 
         self.total_before_taxes = total
         self.taxes = self.bill.taxes

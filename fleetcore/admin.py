@@ -136,6 +136,7 @@ class ConsumptionAdmin(admin.ModelAdmin):
     search_fields = ('phone__user__username', 'phone__user__first_name',
                      'phone__user__last_name', 'bill__billing_date',)
     list_filter = ('bill', 'phone',)
+    readonly_fields = ('total_min', 'total_sms')
     fieldsets = (
         (None, {
             'fields': ('phone', 'bill', 'plan'),
