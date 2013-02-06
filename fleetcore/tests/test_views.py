@@ -3,6 +3,8 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from datetime import date, timedelta
+
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.test import TestCase
@@ -62,7 +64,15 @@ class AuthenticatedHomePageTestCase(BaseViewTestCase):
 
     def test_homepage_recent_consumptions(self):
         consumption = self.factory.make_consumption(user=self.user)
+        bill = consumption.bill
+        bill.billing_date = date.today()
+        bill.save()
+
+        # more than a year before
         another_consumption = self.factory.make_consumption()
+        bill = another_consumption.bill
+        bill.billing_date = date.today() - timedelta(days=400)
+        bill.save()
 
         response = self.client.get(reverse('home'))
         self.assertIn('consumptions', response.context)
