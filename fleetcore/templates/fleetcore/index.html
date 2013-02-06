@@ -1,9 +1,8 @@
-{% extends 'base.html' %}
+{% extends 'fleetcore/base.html' %}
 
 {% block html-title %}Home - {{ block.super }}{% endblock %}
 
 {% block extra-head %}
-    <link rel="stylesheet" href="{{ STATIC_URL }}css/fleetthis.css" />
     <script type="text/javascript" src="{{ STATIC_URL }}js/flotr2.min.js"></script>
     <script type="text/javascript" src="{{ STATIC_URL }}js/charts.js"></script>
     <script type="text/javascript">
@@ -25,13 +24,6 @@
             consumption_chart(container_id, 'SMS', d1, d2);
         });
     </script>
-{% endblock %}
-
-{% block navbar-right-menu %}
-    {% if user.is_superuser %}
-        <li><a href="{% url admin:index %}">Admin</a></li>
-    {% endif %}
-    <li><a href="{% url logout %}">Logout</a></li>
 {% endblock %}
 
 {% block content %}
@@ -72,7 +64,9 @@
     <h4>Last consumption</h4>
     <dl class="dl-horizontal">
         <dt>Date</dt>
-        <dd>{{ consumptions.0.bill.billing_date|date:"M Y" }}</dd>
+        <dd>{{ consumptions.0.bill.billing_date|date:"M Y" }}
+            <br/><small><a href="{% url consumption-history %}">view full history</a></small>
+        </dd>
         <dt>Minutes</dt>
         <dd>{{ consumptions.0.used_min }}
             {% if consumptions.0.penalty_min %}(+{{ consumptions.0.penalty_min }}){% endif %}

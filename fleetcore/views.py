@@ -12,6 +12,14 @@ from fleetcore.models import Consumption
 @login_required
 def home(request):
     recent_consumptions = Consumption.objects.filter(
-        phone__user=request.user).order_by('-bill__billing_date')
-    return TemplateResponse(request, template='index.html',
+        phone__user=request.user).order_by('-bill__billing_date')[:12]
+    return TemplateResponse(request, template='fleetcore/index.html',
                             context={'consumptions': recent_consumptions})
+
+
+@login_required
+def consumption_history(request):
+    consumptions = Consumption.objects.filter(
+        phone__user=request.user).order_by('-bill__billing_date')
+    return TemplateResponse(request, template='fleetcore/history.html',
+                            context={'consumptions': consumptions})
