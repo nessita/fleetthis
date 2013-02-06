@@ -2,7 +2,7 @@
 
 {% block content %}
     <form action="" method="POST">
-        <legend>Welcome to fleetthis</legend>
+        <legend>Welcome</legend>
         {{ form.as_p }}
         {% csrf_token %}
         <p><a href="{% url password-reset %}">Forgot your password?</a></p>
