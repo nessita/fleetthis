@@ -3,6 +3,7 @@ import os.path
 
 
 PROJECT_ROOT = os.path.dirname(os.path.realpath(__file__))
+IS_PROD = False
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG

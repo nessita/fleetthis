@@ -19,6 +19,10 @@ class Command(BaseCommand):
     help = 'Update working copy, sync/migrate and collectstatic.'
 
     def handle(self, *args, **options):
+        r = subprocess.call(['hg', 'pull', '--cwd', REPO_ROOT])
+        if r != 0:
+            raise CommandError('Failed pull.')
+
         r = subprocess.call(['hg', 'update', '--cwd', REPO_ROOT])
         if r != 0:
             raise CommandError('Failed update.')
@@ -26,4 +30,10 @@ class Command(BaseCommand):
         call_command('syncdb', interactive=False)
         call_command('migrate', interactive=False)
         call_command('collectstatic', interactive=False)
+
+        if settings.IS_PROD:
+            r = subprocess.call(['touch', '~/fleetthis/tmp/restart.txt'])
+            if r != 0:
+                raise CommandError('Failed restart.')
+
         self.stdout.write('Successfully updated project.\n')
