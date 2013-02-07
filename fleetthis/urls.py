@@ -14,5 +14,6 @@ urlpatterns = patterns('',
     url(r'^fleetcore/', include('fleetcore.urls')),
     url(r'^admin/', include(admin.site.urls)),
 
-    url(r'^_commit/$', 'fleetthis.views.do_update'),
+    url(r'^_commit/$', 'fleetthis.views.do_update',
+        name='updated-source-hook'),
 )

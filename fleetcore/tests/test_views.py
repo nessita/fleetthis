@@ -79,3 +79,20 @@ class AuthenticatedHomePageTestCase(BaseViewTestCase):
         consumptions = response.context['consumptions']
         self.assertEqual(consumptions.count(), 1)
         self.assertEqual(consumptions[0], consumption)
+
+
+class UpdateTestCase(TestCase):
+    """Test suite for do_update view."""
+
+    def setUp(self):
+        self.url = reverse('updated-source-hook')
+
+    def test_do_update_get(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 405)
+
+    @patch('fleetthis.views.call_command')
+    def test_do_update_post(self, mock_call_command):
+        response = self.client.post(self.url)
+        mock_call_command.assert_called_with('deploy')
+        self.assertEqual(response.status_code, 200)
