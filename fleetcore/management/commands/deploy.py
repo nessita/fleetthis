@@ -31,8 +31,8 @@ class Command(BaseCommand):
         call_command('migrate', interactive=False)
         call_command('collectstatic', interactive=False)
 
-        if settings.IS_PROD:
-            r = subprocess.call(['touch', '~/fleetthis/tmp/restart.txt'])
+        if settings.IS_PROD and settings.RESTART_PATH:
+            r = subprocess.call(['touch', settings.RESTART_PATH])
             if r != 0:
                 raise CommandError('Failed restart.')
 
