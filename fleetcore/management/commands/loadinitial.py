@@ -12,6 +12,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import Group, User
+from django.contrib.sites.models import Site
+
 from fleetcore.models import DataPack, Fleet, Plan, Phone, SMSPack
 
 
@@ -263,5 +265,11 @@ class Command(BaseCommand):
             if account == 725615496:
                 fleet.report_consumption_template = REPORT_TEMPLATE
                 fleet.save()
+
+        # update site configuration
+        current_site = Site.objects.get_current()
+        current_site.domain = settings.SITE_DOMAIN
+        current_site.name = 'Fleet This'
+        current_site.save()
 
         self.stdout.write('Successfully loaded initial data.\n')
