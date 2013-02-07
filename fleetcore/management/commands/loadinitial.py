@@ -180,7 +180,7 @@ FLEETS = (
 
 
 def normalize(word):
-    res = unicodedata.normalize('NFKD', word).encode('ascii','ignore')
+    res = unicodedata.normalize('NFKD', word).encode('ascii', 'ignore')
     return res.lower().replace(' ', '')
 
 
