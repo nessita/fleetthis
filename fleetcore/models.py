@@ -377,7 +377,7 @@ class SMSPack(models.Model):
 class Phone(models.Model):
     """Phone line."""
     number = models.PositiveIntegerField()
-    user = models.OneToOneField(User)
+    user = models.ForeignKey(User)
     current_plan = models.ForeignKey(Plan)
     data_pack = models.ForeignKey(DataPack, blank=True, null=True)
     sms_pack = models.ForeignKey(SMSPack, blank=True, null=True)
