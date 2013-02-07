@@ -513,16 +513,6 @@ class ConsumptionTestCase(BaseModelTestCase):
             self.obj.save()
             self.assertEqual(self.obj.total_min, i + j + k)
 
-    def test_wrong_total_min_is_corrected_on_save(self):
-        for i, j, k in itertools.product([0, 19], repeat=3):
-            self.obj.included_min = i
-            self.obj.exceeded_min = j
-            self.obj.penalty_min = k
-            self.obj.total_min = (i + j + k) / 2
-
-            self.obj.save()
-            self.assertEqual(self.obj.total_min, i + j + k)
-
     def test_total_sms(self):
         self.assertEqual(self.obj.total_sms, 0)
 
@@ -530,15 +520,6 @@ class ConsumptionTestCase(BaseModelTestCase):
         for i, k in itertools.product([0, 13], repeat=2):
             self.obj.sms = i
             self.obj.penalty_sms = k
-
-            self.obj.save()
-            self.assertEqual(self.obj.total_sms, i + k)
-
-    def test_wrong_total_sms_is_corrected_on_save(self):
-        for i, k in itertools.product([0, 19], repeat=2):
-            self.obj.sms = i
-            self.obj.penalty_sms = k
-            self.obj.total_sms = (i + k) / 2
 
             self.obj.save()
             self.assertEqual(self.obj.total_sms, i + k)
