@@ -9,6 +9,8 @@ from django.contrib import admin, messages
 from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.auth.models import Group, User
 from django.core.urlresolvers import reverse
+from django.db import models
+from django.forms.widgets import TextInput
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
@@ -38,6 +40,9 @@ class PenaltyAdmin(admin.StackedInline):
 
 class BillAdmin(admin.ModelAdmin):
 
+    formfield_overrides = {
+        models.TextField: {'widget': TextInput},
+    }
     inlines = (PenaltyAdmin,)
     readonly_fields = (
         'taxes', 'consumptions_total', 'outcome',
@@ -59,6 +64,7 @@ class BillAdmin(admin.ModelAdmin):
             'fields': (
                 ('internal_tax', 'iva_tax', 'other_tax'),
                 ('taxes', 'consumptions_total', 'outcome'),
+                'notes',
             )
         }),
     )
@@ -144,7 +150,8 @@ class ConsumptionAdmin(admin.ModelAdmin):
         ('Totals', {
             'fields': (('penalty_min', 'total_min'),
                        ('penalty_sms', 'total_sms'),
-                       'total_before_taxes', 'taxes', 'total_before_round',
+                       'total_before_taxes', 'taxes', 'extra',
+                       'total_before_round',
                        ('total', 'payed'),)
         }),
         ('Data from provider', {

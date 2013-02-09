@@ -7,7 +7,7 @@ from __future__ import unicode_literals
 import logging
 import os
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from datetime import datetime
 from decimal import Decimal
 from itertools import tee, izip
@@ -100,7 +100,7 @@ class Bill(models.Model):
     internal_tax = TaxField(default=Decimal('0.0417'))
     iva_tax = TaxField(default=Decimal('0.27'))
     other_tax = TaxField(default=Decimal('0.04'))
-
+    notes = models.TextField(blank=True)
     created = models.DateField(auto_now_add=True)
     last_modified = models.DateField(auto_now=True)
 
@@ -131,16 +131,16 @@ class Bill(models.Model):
             user = User.objects.get(is_superuser=True)
 
         # group consumptions per leader
-        data = {}
+        data = OrderedDict()
         leaders = UserProfile.objects.filter(leader=user)
-        for leader in leaders:
+        for leader in leaders.order_by('user__first_name'):
             u = leader.user
             users = list(UserProfile.objects.filter(leader=u)) + [u]
             consumptions = self.consumption_set.filter(phone__user__in=users)
             if consumptions:
                 total = consumptions.aggregate(total=Sum('total'))['total']
                 data[u] = {
-                    'consumptions': consumptions,
+                    'consumptions': consumptions.order_by('phone__number'),
                     'total': total,
                 }
 
@@ -434,6 +434,9 @@ class Consumption(models.Model):
     total_before_round = MoneyField()
     total = MoneyField()
 
+    # added by hand if needed
+    extra = MoneyField('Extra (por equipo/s, o IVA de equipo, etc.)')
+
     # keep track of the payment of this consumption
     payed = models.BooleanField()
 
@@ -465,12 +468,18 @@ class Consumption(models.Model):
             if plan.with_sms_clearing:
                 # calculate real amount of sms to be charged for
                 total += (self.sms + self.penalty_sms) * plan.price_sms
-                total -= self.sms_price
+                # XXX: potential issue: is there are not SMS penalties,
+                # (i.e. all SMS were consumed), we need to substract the
+                # exceeding SMS being charged in the sms_price column
+                p = Penalty.objects.filter(bill=self.bill, plan=self.plan)
+                if p.count() > 0 and p.get().sms == 0:
+                    total -= self.sms_price
 
         self.total_before_taxes = total
         self.taxes = self.bill.taxes
-        self.total_before_round = (self.total_before_taxes *
-                                   (Decimal('1') + self.taxes))
+        self.total_before_round = (
+            self.total_before_taxes * (Decimal('1') + self.taxes) +
+            self.extra)  # add any needed extra
         self.total = round(self.total_before_round)
         super(Consumption, self).save(*args, **kwargs)
 
