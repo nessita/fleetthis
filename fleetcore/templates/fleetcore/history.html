@@ -23,7 +23,7 @@
                     </td>
                     <td>{{ c.sms }}
                         {% if c.penalty_sms %}(+{{ c.penalty_sms }}){% endif %}</td>
-                    <td>${{ c.reported_total|floatformat:'2' }}</td>
+                    <td>${{ c.total|floatformat:'2' }}</td>
                 </tr>
             {% endfor %}
         </tbody>
