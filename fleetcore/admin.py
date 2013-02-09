@@ -45,7 +45,7 @@ class BillAdmin(admin.ModelAdmin):
     }
     inlines = (PenaltyAdmin,)
     readonly_fields = (
-        'taxes', 'consumptions_total', 'outcome',
+        'taxes', 'consumptions_total', 'outcome_debt', 'outcome_total',
     )
     fieldsets = (
         (None, {
@@ -63,7 +63,8 @@ class BillAdmin(admin.ModelAdmin):
         ('Taxes', {
             'fields': (
                 ('internal_tax', 'iva_tax', 'other_tax'),
-                ('taxes', 'consumptions_total', 'outcome'),
+                ('taxes', 'consumptions_total',
+                 'outcome_debt', 'outcome_total'),
                 'notes',
             )
         }),

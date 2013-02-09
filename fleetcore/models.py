@@ -122,8 +122,12 @@ class Bill(models.Model):
         return self.consumption_set.aggregate(total=Sum('total'))['total']
 
     @property
-    def outcome(self):
+    def outcome_debt(self):
         return self.consumptions_total - self.billing_debt
+
+    @property
+    def outcome_total(self):
+        return self.consumptions_total - self.billing_total
 
     @property
     def details(self, user=None):
@@ -165,6 +169,7 @@ class Bill(models.Model):
                 logging.warning('Can not apply a 0 value as penalty.')
                 msg = 'Penalty should be 0 by now, got %s instead'
                 assert penalty == 0, msg % penalty
+                break
 
             penalty -= to_apply
 
@@ -174,7 +179,7 @@ class Bill(models.Model):
                 assert c is not None
                 current = getattr(c, attr_name)
                 setattr(c, attr_name, current + to_apply)
-                ##assert penalty == 0 or getattr(c, attr_total) == total2
+                assert penalty == 0 or getattr(c, attr_total) == total2
 
             if penalty > 0:
                 # update data
@@ -245,6 +250,16 @@ class Bill(models.Model):
         except pdf2cell.CellularDataParseError as e:
             raise Bill.ParseError(unicode(e))
 
+        bill_date = data.get('bill_date')
+        if bill_date:
+            self.billing_date = bill_date
+        self.billing_debt = data.get('bill_debt', Decimal('0'))
+        self.billing_total = data.get('bill_total', Decimal('0'))
+        self.parsing_date = datetime.now()
+        self.internal_tax = data.get('internal_tax')
+        self.other_tax = data.get('other_tax')
+        self.save()
+
         for d in data.get('phone_data', []):
             try:
                 phone = Phone.objects.get(number=d[PHONE_NUMBER])
@@ -257,13 +272,19 @@ class Bill(models.Model):
                 if not d[PLAN]:
                     # this phone is disappearing, so there should be a previous
                     # consumption with the plan info that serves for this item
-                    raise Bill.ParseError('Previous consumption for %s does '
-                                          'not exist and the plan info is not '
-                                          'defined.' % phone)
-                try:
-                    plan = Plan.objects.get(name=d[PLAN])
-                except Plan.DoesNotExist:
-                    raise Bill.ParseError('Plan %s does not exist.' % d[PLAN])
+                    logging.warning('Plan info for %r is not available from '
+                                    'parsed data.', phone)
+                    plan = Consumption.objects.filter(phone=phone)
+                    if plan.count() == 0:
+                        raise Bill.ParseError('Plan info for %r is not '
+                                              'available.' % phone)
+                    plan = plan.latest().plan
+                else:
+                    try:
+                        plan = Plan.objects.get(name=d[PLAN])
+                    except Plan.DoesNotExist:
+                        raise Bill.ParseError('Plan %s does not exist in DB.' %
+                                              d[PLAN])
 
             kwargs = dict(
                 reported_user=d[USER],
@@ -286,15 +307,6 @@ class Bill(models.Model):
             )
             Consumption.objects.create(phone=phone, bill=self, plan=plan,
                                        **kwargs)
-
-        bill_date = data.get('bill_date')
-        if bill_date:
-            self.billing_date = bill_date
-        self.billing_debt = data.get('bill_debt', Decimal('0'))
-        self.billing_total = data.get('bill_total', Decimal('0'))
-        self.parsing_date = datetime.now()
-        self.provider_number = data.get('bill_number', '')
-        self.save()
 
     def calculate_penalties(self):
         """Calculate penalties per plan with clearing."""
@@ -472,7 +484,7 @@ class Consumption(models.Model):
                 # (i.e. all SMS were consumed), we need to substract the
                 # exceeding SMS being charged in the sms_price column
                 p = Penalty.objects.filter(bill=self.bill, plan=self.plan)
-                if p.count() > 0 and p.get().sms == 0:
+                if p.count() == 0 or p.get().sms == 0:
                     total -= self.sms_price
 
         self.total_before_taxes = total
@@ -489,7 +501,6 @@ class Consumption(models.Model):
         return self.included_min + self.exceeded_min
 
     class Meta:
-        ordering = ('phone',)
         get_latest_by = 'bill__billing_date'
         unique_together = ('phone', 'bill')
 

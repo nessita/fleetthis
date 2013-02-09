@@ -34,29 +34,21 @@ from pdfminer.pdfdevice import PDFDevice
  NDL_MIN, NDL_PRICE, IDL_MIN, IDL_PRICE,
  SMS, SMS_PRICE, EQUIPMENT_PRICE, OTHER_PRICE, TOTAL_PRICE) = range(18)
 
-PHONE_TOKEN = '-'
-
-OLD_FORMAT = dict(
-    bill_debt_token='TOTAL A PAGAR$',
-    bill_number_token='Factura Nro.',
-    bill_total_token='TOTAL A PAGAR$',
-    date_token='Fecha de Factura',
-    front_page=(1,),
-    join_token='',
-    table_pages=(2, 7, 10),
-)
-
-NEW_FORMAT = dict(
-    bill_debt_token='TOTAL A PAGAR: $',
-    bill_number_token='Factura Nro.: ',
-    bill_total_token='TOTAL FACTURA: $',
-    date_token='Fecha de Factura: ',
-    front_page=(2, 3),
-    join_token=' ',
-    table_pages=(3, 4),
-)
-
 PHONE_ROW_RE = re.compile(r'\s*(\d+,\d{2})\s*')
+PHONE_TOKEN = '-'
+PERCENT_RE = '(\d+(?:\.\d+){0,1})%'
+PRICE_RE = '((?:\d+\.){0,1}\d+,\d+)'
+TAX_FINANC_RE = re.compile(
+    r'Cargo (\d+(?:\.\d+){0,1})% financ ENARD Ley 26\.573/09\s+(\d+,\d+)',
+    re.IGNORECASE)
+TAX_INTERNAL_RE = re.compile(
+    r'Impuesto Interno\s*(\d+(?:\.\d+){0,1})%\s+(\d+,\d+)', re.IGNORECASE)
+TAX_PERCEP_RE = re.compile(
+    r'Iva Percepcion (\d+(?:\.\d+){0,1})%\s+(\d+,\d+)', re.IGNORECASE)
+BILL_TOTAL_NEW_RE = re.compile(
+    r'Total Factura Cta. 2/\d+\s*\$\s*((?:\d+\.){0,1}\d+,\d+)', re.IGNORECASE)
+BILL_TOTAL_OLD_RE = re.compile(
+    r'TOTAL FACTURA\s*\(IVA incluido\)\$\s*(\d+,\d+)', re.IGNORECASE)
 
 
 class CellularDataParseError(Exception):
@@ -66,7 +58,11 @@ class CellularDataParseError(Exception):
 class CellularConverter(PDFPageAggregator):
     """CellularConverter."""
 
-    formats = dict(new=NEW_FORMAT, old=OLD_FORMAT)
+    front_pages = ()
+    table_pages = ()
+    taxes_pages = ()
+    taxes_fields = ()
+
     bill_number_length = 13
     bill_total_length = bill_debt_length = 8
     date_length = 10
@@ -74,13 +70,13 @@ class CellularConverter(PDFPageAggregator):
     plan_length = 6
     phone_length = 11
 
-    def __init__(self, input_fd, format, *args, **kwargs):
-        self.bill_format = self.formats[format].copy()
+    def __init__(self, input_fd, *args, **kwargs):
         self._bill_date = None
         self._bill_number = None
         self._bill_total = None
         self._bill_debt = None
-        self._data = []
+        self._bill_taxes = {}
+        self._phone_data = []
 
         # Create a PDF parser object associated with the file object.
         parser = PDFParser(input_fd)
@@ -119,10 +115,19 @@ class CellularConverter(PDFPageAggregator):
             plan = row[j:j + self.plan_length].strip()
             rest = row[j + self.plan_length:]
             rest = PHONE_ROW_RE.findall(rest)
-            self._data.append(
+            self._phone_data.append(
                 [phone, notes, plan] +
                 [Decimal(i.strip().replace(',', '.')) for i in rest]
             )
+
+    def _extract_all_text(self, page):
+        lines = []
+        for item in page:
+            if getattr(item, 'get_text', None) is not None:
+                t = item.get_text()
+                lines.append(t)
+
+        return ''.join(lines)
 
     def _extract_text(self, page, fn):
         last_text = []
@@ -145,20 +150,20 @@ class CellularConverter(PDFPageAggregator):
 
     def _process_front_page(self, line):
         bill_date_str = self._process_bill_token(
-            line, self.bill_format['date_token'], self.date_length
+            line, self.format['date_token'], self.date_length
         )
         if bill_date_str and not self._bill_date:
             self._bill_date = datetime.strptime(bill_date_str, "%d/%m/%Y")
 
         bill_number = self._process_bill_token(
-            line, self.bill_format['bill_number_token'],
+            line, self.format['bill_number_token'],
             self.bill_number_length,
         )
         if bill_number and not self._bill_number:
             self._bill_number = bill_number
 
         bill_total = self._process_bill_token(
-            line, self.bill_format['bill_total_token'],
+            line, self.format['bill_total_token'],
             self.bill_total_length,
         )
         if bill_total and not self._bill_total:
@@ -166,12 +171,36 @@ class CellularConverter(PDFPageAggregator):
                 bill_total.replace('.', '').replace(',', '.'))
 
         bill_debt = self._process_bill_token(
-            line, self.bill_format['bill_debt_token'],
+            line, self.format['bill_debt_token'],
             self.bill_debt_length,
         )
         if bill_debt and not self._bill_debt:
             self._bill_debt = Decimal(
                 bill_debt.replace('.', '').replace(',', '.'))
+
+    def process_front_page(self, layout):
+        return self._extract_text(layout, self._process_front_page)
+
+    def process_phone_data(self, layout):
+        return self._extract_text(layout, self._process_phone_row)
+
+    def process_taxes(self, layout):
+        all_text = self._extract_all_text(layout)
+        results = []
+        for regex in self.bill_taxes:
+            match = regex.search(all_text)
+            if not match:
+                continue
+            results.extend(match.groups())
+
+        groups = zip(self.taxes_fields, results)
+        for k, v in groups:
+            if ',' in v:
+                v = v.replace('.', '').replace(',', '.')
+            value = Decimal(v)
+            if k.endswith('_tax'):
+                value /= 100
+            self._bill_taxes[k] = value
 
     def gather_phone_info(self):
         interpreter = PDFPageInterpreter(self.rsrcmgr, self)
@@ -179,22 +208,65 @@ class CellularConverter(PDFPageAggregator):
             interpreter.process_page(page)
             # receive the LTPage object for the page.
             layout = self.get_result()
-            if (layout.pageid in self.bill_format['front_page'] and
-                    not self._bill_debt):
-                self._extract_text(layout, self._process_front_page)
-            elif (layout.pageid in self.bill_format['table_pages'] and
-                  not self._data):
-                self._extract_text(layout, self._process_phone_row)
+            if layout.pageid in self.front_pages:
+                self.process_front_page(layout)
+            if layout.pageid in self.table_pages:
+                self.process_phone_data(layout)
+            if layout.pageid in self.taxes_pages:
+                self.process_taxes(layout)
 
-        if not self._data:
+        if not self._phone_data:
             raise CellularDataParseError()
+
+        self._bill_taxes['other_tax'] += self._bill_taxes.pop('percep_tax', 0)
+        self._bill_taxes['other_tax_price'] += self._bill_taxes.pop(
+            'percep_tax_price', 0)
 
         result = {
             'bill_date': self._bill_date, 'bill_number': self._bill_number,
             'bill_total': self._bill_total, 'bill_debt': self._bill_debt,
-            'phone_data': self._data,
+            'phone_data': self._phone_data,
         }
+        result.update(self._bill_taxes)
         return result
+
+
+class OldCellularConverter(CellularConverter):
+    """CellularConverter."""
+
+    format = dict(
+        bill_debt_token='TOTAL A PAGAR$',
+        bill_number_token='Factura Nro.',
+        bill_total_token='TOTAL A PAGAR$',
+        date_token='Fecha de Factura',
+        join_token='',
+    )
+    bill_taxes = (TAX_INTERNAL_RE, TAX_FINANC_RE, BILL_TOTAL_OLD_RE)
+    front_pages = (1,)
+    table_pages = (2, 7, 10)
+    taxes_pages = (5, 6)
+    taxes_fields = ('internal_tax', 'internal_tax_price',
+                    'other_tax', 'other_tax_price', 'bill_total')
+
+
+class NewCellularConverter(CellularConverter):
+    """CellularConverter."""
+
+    format = dict(
+        bill_debt_token='TOTAL A PAGAR: $',
+        bill_number_token='Factura Nro.: ',
+        bill_total_token='TOTAL FACTURA: $',
+        date_token='Fecha de Factura: ',
+        join_token=' ',
+    )
+    bill_taxes = (TAX_INTERNAL_RE, TAX_PERCEP_RE, TAX_FINANC_RE,
+                  BILL_TOTAL_NEW_RE)
+    front_pages = (2, 3)
+    table_pages = (3, 4)
+    taxes_pages = (2, 3)
+    taxes_fields = ('internal_tax', 'internal_tax_price',
+                    'percep_tax', 'percep_tax_price',
+                    'other_tax', 'other_tax_price', 'bill_total')
 
 
 def parse_file(fname, format='new'):
@@ -204,7 +276,10 @@ def parse_file(fname, format='new'):
         return None
 
     try:
-        device = CellularConverter(input_fd, format=format)
+        if format == 'old':
+            device = OldCellularConverter(input_fd)
+        else:
+            device = NewCellularConverter(input_fd)
         result = device.gather_phone_info()
     except PDFSyntaxError:
         result = {}

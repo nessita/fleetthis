@@ -65,8 +65,9 @@ class ParsePDFTestCase(TestCase):
         fname = os.path.join(os.path.dirname(__file__), 'files', self.real_pdf)
         result = pdf2cell.parse_file(fname, format=self.format)
 
-        self.assertEqual(result.keys(), self.real_result.keys())
-        for k in ('bill_date', 'bill_number', 'phone_data'):
+        self.assertEqual(sorted(result.keys()),
+                         sorted(self.real_result.keys()))
+        for k in result:  # ('bill_date', 'bill_number', 'phone_data'):
             self.assertEqual(result[k], self.real_result[k])
 
         self.assertEqual(result, self.real_result)

@@ -11,7 +11,11 @@ PDF_PARSE_RESULT = {
     'bill_date': datetime(2012, 7, 26),
     'bill_debt': Decimal('868.86'),
     'bill_number': '0588-50542628',
-    'bill_total': Decimal('868.86'),
+    'bill_total': Decimal('1178.29'),
+    'internal_tax': Decimal('0.0417'),
+    'internal_tax_price': Decimal('37.15'),
+    'other_tax': Decimal('0.01'),
+    'other_tax_price': Decimal('7.87'),
     'phone_data': [
         [1166936420, 'L, J', 'TSC16', Decimal('35.00'), Decimal('45.00'),
          Decimal('0.00'), Decimal('103.00'), Decimal('0.00'), Decimal('0.00'),
@@ -133,6 +137,10 @@ PDF_PARSE_NEW_RESULT = {
     'bill_debt': Decimal('1871.22'),
     'bill_number': '0588-01407943',
     'bill_total': Decimal('1871.22'),
+    'internal_tax': Decimal('0.0417'),
+    'internal_tax_price': Decimal('55.38'),
+    'other_tax': Decimal('0.04'),
+    'other_tax_price': Decimal('51.96'),
     'phone_data': [
         [1166936420, 'L, J', 'TCL16',
          Decimal('35.00'), Decimal('45.00'), Decimal('0.00'),
