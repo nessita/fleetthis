@@ -76,7 +76,7 @@
             {% if consumptions.0.penalty_sms %}(+{{ consumptions.0.penalty_sms }}){% endif %}
         </dd>
         <dt>Total</dt>
-        <dd>${{ consumptions.0.reported_total|floatformat:'2' }}<dd>
+        <dd>${{ consumptions.0.total|floatformat:'2' }}<dd>
     </dl>
     {% endif %}
 
