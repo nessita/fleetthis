@@ -255,10 +255,9 @@ class Bill(models.Model):
             self.billing_date = bill_date
         self.billing_debt = data.get('bill_debt', Decimal('0'))
         self.billing_total = data.get('bill_total', Decimal('0'))
-        self.parsing_date = datetime.now()
-        self.internal_tax = data.get('internal_tax')
-        self.other_tax = data.get('other_tax')
-        self.save()
+        self.provider_number = data.get('bill_number', '')
+        self.internal_tax = data.get('internal_tax', self.internal_tax)
+        self.other_tax = data.get('other_tax', self.other_tax)
 
         for d in data.get('phone_data', []):
             try:
@@ -307,6 +306,9 @@ class Bill(models.Model):
             )
             Consumption.objects.create(phone=phone, bill=self, plan=plan,
                                        **kwargs)
+
+        self.parsing_date = datetime.now()
+        self.save()
 
     def calculate_penalties(self):
         """Calculate penalties per plan with clearing."""

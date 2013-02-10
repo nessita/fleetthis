@@ -8,6 +8,7 @@ import os
 import re
 import sys
 
+from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 
@@ -75,7 +76,7 @@ class CellularConverter(PDFPageAggregator):
         self._bill_number = None
         self._bill_total = None
         self._bill_debt = None
-        self._bill_taxes = {}
+        self._bill_taxes = defaultdict(int)
         self._phone_data = []
 
         # Create a PDF parser object associated with the file object.
@@ -244,7 +245,7 @@ class OldCellularConverter(CellularConverter):
     bill_taxes = (TAX_INTERNAL_RE, TAX_FINANC_RE, BILL_TOTAL_OLD_RE)
     front_pages = (1,)
     table_pages = (2, 7, 10)
-    taxes_pages = (5, 6)
+    taxes_pages = (5, 6, 7, 8)
     taxes_fields = ('internal_tax', 'internal_tax_price',
                     'other_tax', 'other_tax_price', 'bill_total')
 
