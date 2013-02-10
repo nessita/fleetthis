@@ -180,15 +180,17 @@ class CellularConverter(PDFPageAggregator):
                 bill_debt.replace('.', '').replace(',', '.'))
 
     def process_front_page(self, layout):
-        return self._extract_text(layout, self._process_front_page)
+        self._extract_text(layout, self._process_front_page)
 
     def process_phone_data(self, layout):
-        return self._extract_text(layout, self._process_phone_row)
+        if self._phone_data:
+            return
+        self._extract_text(layout, self._process_phone_row)
 
     def process_taxes(self, layout):
         all_text = self._extract_all_text(layout)
         results = []
-        for regex in self.bill_taxes:
+        for regex in self.taxes_list:
             match = regex.search(all_text)
             if not match:
                 continue
@@ -213,7 +215,7 @@ class CellularConverter(PDFPageAggregator):
                 self.process_front_page(layout)
             if layout.pageid in self.table_pages:
                 self.process_phone_data(layout)
-            if layout.pageid in self.taxes_pages:
+            if not self._bill_taxes:
                 self.process_taxes(layout)
 
         if not self._phone_data:
@@ -242,12 +244,12 @@ class OldCellularConverter(CellularConverter):
         date_token='Fecha de Factura',
         join_token='',
     )
-    bill_taxes = (TAX_INTERNAL_RE, TAX_FINANC_RE, BILL_TOTAL_OLD_RE)
     front_pages = (1,)
     table_pages = (2, 7, 10)
     taxes_pages = (5, 6, 7, 8)
     taxes_fields = ('internal_tax', 'internal_tax_price',
                     'other_tax', 'other_tax_price', 'bill_total')
+    taxes_list = (TAX_INTERNAL_RE, TAX_FINANC_RE, BILL_TOTAL_OLD_RE)
 
 
 class NewCellularConverter(CellularConverter):
@@ -260,14 +262,14 @@ class NewCellularConverter(CellularConverter):
         date_token='Fecha de Factura: ',
         join_token=' ',
     )
-    bill_taxes = (TAX_INTERNAL_RE, TAX_PERCEP_RE, TAX_FINANC_RE,
-                  BILL_TOTAL_NEW_RE)
     front_pages = (2, 3)
     table_pages = (3, 4)
     taxes_pages = (2, 3)
     taxes_fields = ('internal_tax', 'internal_tax_price',
                     'percep_tax', 'percep_tax_price',
                     'other_tax', 'other_tax_price', 'bill_total')
+    taxes_list = (TAX_INTERNAL_RE, TAX_PERCEP_RE, TAX_FINANC_RE,
+                  BILL_TOTAL_NEW_RE)
 
 
 def parse_file(fname, format='new'):
