@@ -29,27 +29,29 @@
 {% block content %}
     <h1>{{ user.get_full_name }}</h1>
 
-    {% if user.phone %}
+    {% with user.phone_set.latest as phone%}
+    {% if phone %}
     <h4>User information</h4>
     {% with user.get_profile.leader as leader %}
     <dl class="dl-horizontal">
         <dt>Phone Number</dt>
-        <dd>{{ user.phone.number }}</dd>
+        <dd>{{ phone.number }}</dd>
         <dt>Plan</dt>
-        <dd>{{ user.phone.current_plan }}</dd>
-        {% if user.phone.data_pack %}
+        <dd>{{ phone.current_plan }}</dd>
+        {% if phone.data_pack %}
             <dt>Data pack</dt>
-            <dd>{{ user.phone.data_pack }}</dd>
+            <dd>{{ phone.data_pack }}</dd>
         {% endif %}
-        {% if user.phone.sms_pack %}
+        {% if phone.sms_pack %}
             <dt>SMS pack</dt>
-            <dd>{{ user.phone.sms_pack }}</dd>
+            <dd>{{ phone.sms_pack }}</dd>
         {% endif %}
         <dt>Leader</dt>
         <dd>{% firstof leader.get_full_name leader.username %}</dd>
     </dl>
     {% endwith %}
     {% endif %}
+    {% endwith %}
 
     {% if user.leadering.count %}
     <h4>Leadering</h4>

@@ -399,6 +399,9 @@ class Phone(models.Model):
     active_since = models.DateTimeField(default=datetime.today)
     active_to = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        get_latest_by = 'active_since'
+
     def __unicode__(self):
         result = unicode(self.number)
         if self.user.get_full_name():
