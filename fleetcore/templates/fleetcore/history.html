@@ -3,7 +3,9 @@
 {% block html-title %}History - {{ block.super }}{% endblock %}
 
 {% block content %}
-    <h1>{{ user.get_full_name }} <small><a href="{% url home %}">[back]</a></small></h1>
+    <h1>{{ current_user.get_full_name }}
+        <small><a href="javascript:history.back()">[back]</a></small>
+    </h1>
 
     <table class="table table-striped">
         <thead>

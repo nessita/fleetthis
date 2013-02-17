@@ -27,12 +27,16 @@
 {% endblock %}
 
 {% block content %}
-    <h1>{{ user.get_full_name }}</h1>
+    <h1>{{ current_user.get_full_name }}
+    {% ifnotequal current_user user %}
+        <small><a href="javascript:history.back()">[back]</a></small>
+    {% endifnotequal %}
+    </h1>
 
-    {% with user.phone_set.latest as phone%}
+    {% with current_user.phone_set.latest as phone%}
     {% if phone %}
     <h4>User information</h4>
-    {% with user.get_profile.leader as leader %}
+    {% with current_user.get_profile.leader as leader %}
     <dl class="dl-horizontal">
         <dt>Phone Number</dt>
         <dd>{{ phone.number }}</dd>
@@ -53,11 +57,11 @@
     {% endif %}
     {% endwith %}
 
-    {% if user.leadering.count %}
+    {% if current_user.leadering.count %}
     <h4>Leadering</h4>
     <ul>
-        {% for profile in user.leadering.all %}
-            <li>{{ profile.user.get_full_name }}</li>
+        {% for profile in current_user.leadering.all %}
+            <li><a href="{% url user-details profile.user.username %}">{{ profile.user.get_full_name }}</a></li>
         {% endfor %}
     </ul>
     {% endif %}
@@ -67,7 +71,12 @@
     <dl class="dl-horizontal">
         <dt>Date</dt>
         <dd>{{ consumptions.0.bill.billing_date|date:"M Y" }}
-            <br/><small><a href="{% url consumption-history %}">view full history</a></small>
+            {% ifequal current_user user %}
+                {% url consumption-history as history_url %}
+            {% else %}
+                {% url user-consumption-history current_user.username as history_url %}
+            {% endifequal %}
+            <br/><small><a href="{{ history_url }}">view full history</a></small>
         </dd>
         <dt>Minutes</dt>
         <dd>{{ consumptions.0.used_min }}
@@ -80,11 +89,12 @@
         <dt>Total</dt>
         <dd>${{ consumptions.0.total|floatformat:'2' }}<dd>
     </dl>
-    {% endif %}
 
     <h4>Last 12-month stats</h4>
     <div id="minutes" class="chart"></div>
     <div id="sms" class="chart"></div>
+
+    {% endif %}
 
 {% endblock %}
 

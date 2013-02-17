@@ -20,7 +20,6 @@ class UserProfile(models.Model):
             leader = ' (leadered by %s)' % leader
         return '%s - %s%s' % (self.user, self.user.get_full_name(), leader)
 
-
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
