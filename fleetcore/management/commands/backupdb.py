@@ -24,4 +24,4 @@ class Command(BaseCommand):
         msg = EmailMessage(subject='FT DB backup', to=[settings.ADMIN_EMAIL])
         msg.attach_file(db_path, 'application/octet-stream')
         msg.send()
-        self.stdout.write('Successfully updated project.\n')
+        self.stdout.write('Successfully sent email.\n')
