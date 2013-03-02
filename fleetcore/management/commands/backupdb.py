@@ -17,7 +17,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # grab db path
-        db_path = settings.DATABASES['default']['NAME'] + 'a'
+        db_path = settings.DATABASES['default']['NAME']
         if not os.path.exists(db_path):
             raise CommandError('DB path %r does not exist.\n' % db_path)
 
