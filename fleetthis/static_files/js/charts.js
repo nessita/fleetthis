@@ -29,7 +29,7 @@ function consumption_chart(container_id, title, data, penalties) {
     var m1 = [], m2 = [];
     for(var i = 0; i < data.length; i++){
         m1.push([data[i][0], data[i][1]]);
-        m2.push([penalties[i][0], (data[i][1] + penalties[i][1]).toFixed(2)]);
+        m2.push([penalties[i][0], data[i][1] + penalties[i][1]]);
     }
 
     var container = document.getElementById(container_id);

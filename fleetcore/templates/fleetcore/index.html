@@ -10,8 +10,8 @@
             var container_id = 'minutes';
             var d1 = [], d2 = [];
             {% for consumption in consumptions %}
-                d1.push([{{ consumption.bill.billing_date.month }}, {{ consumption.used_min|floatformat:2 }}]);
-                d2.push([{{ consumption.bill.billing_date.month }}, {{ consumption.penalty_min|floatformat:2 }}]);
+                d1.push([{{ consumption.bill.billing_date.month }}, {{ consumption.used_min|floatformat:1 }}]);
+                d2.push([{{ consumption.bill.billing_date.month }}, {{ consumption.penalty_min|floatformat:1 }}]);
             {% endfor %}
             consumption_chart(container_id, 'Minutes', d1, d2);
 
