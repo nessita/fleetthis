@@ -74,13 +74,13 @@ function consumption_chart(container_id, title, data, penalties) {
               tickDecimals: 0
             },
             xaxis: {
-                min: current_month - 1,
-                noTicks: 12,
+                min: mod(current_month - 1, 12),
+                noTicks: 6,
                 tickFormatter: function(x) {
                     var x = parseInt(x);
                     var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    return months[((x - 1) + (current_month - 1)) % 12];
+                    return months[mod(x + current_month - 2, 12)];
                 }
             },
             bars: {
