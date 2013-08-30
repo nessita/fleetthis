@@ -170,11 +170,34 @@ class ConsumptionAdmin(admin.ModelAdmin):
     )
 
 
+class PhoneAdmin(admin.ModelAdmin):
+    list_display = (
+        'number', 'user_full_name', 'current_plan', 'active', 'since',
+    )
+    list_filter = ('number', 'user')
+    ordering = ('active_to', '-active_since',)
+
+    def user_full_name(self, phone):
+        return phone.user.get_full_name()
+
+    def active(self, phone):
+        return phone.active
+
+    active.boolean = True
+
+    def since(self, phone):
+        if phone.active:
+            result = str(phone.active_since)
+        else:
+            result = str(phone.active_to)
+        return result
+
+
 admin.site.register(Bill, BillAdmin)
 admin.site.register(Consumption, ConsumptionAdmin)
 admin.site.register(DataPack)
 admin.site.register(Fleet)
-admin.site.register(Phone)
+admin.site.register(Phone, PhoneAdmin)
 admin.site.register(Plan)
 admin.site.register(UserProfile)
 admin.site.register(SMSPack)
