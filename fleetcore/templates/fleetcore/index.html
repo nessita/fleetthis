@@ -61,20 +61,20 @@
     <h4>Leadering</h4>
     <ul>
         {% for profile in current_user.leadering.all %}
-            <li><a href="{% url user-details profile.user.username %}">{{ profile.user.get_full_name }}</a></li>
+            <li><a href="{% url 'user-details' profile.user.username %}">{{ profile.user.get_full_name }}</a></li>
         {% endfor %}
     </ul>
     {% endif %}
-    
+
     {% if consumptions %}
     <h4>Last consumption</h4>
     <dl class="dl-horizontal">
         <dt>Date</dt>
         <dd>{{ consumptions.0.bill.billing_date|date:"M Y" }}
             {% ifequal current_user user %}
-                {% url consumption-history as history_url %}
+                {% url 'consumption-history' as history_url %}
             {% else %}
-                {% url user-consumption-history current_user.username as history_url %}
+                {% url 'user-consumption-history' current_user.username as history_url %}
             {% endifequal %}
             <br/><small><a href="{{ history_url }}">view full history</a></small>
         </dd>

@@ -9,7 +9,7 @@
     <div class="pull-left">
         {{ form.as_p }}
         {% csrf_token %}
-        <p><a href="{% url password-reset %}">Forgot your password?</a></p>
+        <p><a href="{% url 'password-reset' %}">Forgot your password?</a></p>
         <p><button type="submit" class="btn">Login</button></p>
     </div>
     <div class="pull-right" id="logo">
