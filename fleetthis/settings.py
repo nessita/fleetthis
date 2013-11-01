@@ -26,7 +26,7 @@ DATABASES = {
     }
 }
 
-ALLOWED_HOSTS = ['http://fleetthis.com.ar/']
+ALLOWED_HOSTS = ['fleetthis.com.ar']
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
