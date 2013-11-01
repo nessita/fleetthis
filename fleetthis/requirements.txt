@@ -1,7 +1,6 @@
-Django==1.4.3
-south
-mock
+Django==1.5.5
+South==0.8.2
+mock==1.0.1
 pdfminer==20110515
-pep8
-#psycopg2ct==2.4.4
-pyflakes
+pep8==1.4.6
+pyflakes==0.7.3
