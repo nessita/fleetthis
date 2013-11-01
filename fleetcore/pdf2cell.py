@@ -92,7 +92,7 @@ class CellularConverter(PDFPageAggregator):
         self.doc.initialize(password)
         # Check if the document allows text extraction. If not, abort.
         if not self.doc.is_extractable:
-            raise PDFTextExtractionNotAllowed
+            raise PDFTextExtractionNotAllowed('PDF text extraction not allowed.')
         # Create a PDF resource manager object that stores shared resources.
         self.rsrcmgr = PDFResourceManager()
         # Set parameters for analysis.
@@ -219,7 +219,10 @@ class CellularConverter(PDFPageAggregator):
                 self.process_taxes(layout)
 
         if not self._phone_data:
-            raise CellularDataParseError()
+            raise CellularDataParseError(
+                'Could not parse file, got empty phone data (front_pages are '
+                '%r, table_pages are %r)' %
+                (self.front_pages, self.table_pages))
 
         self._bill_taxes['other_tax'] += self._bill_taxes.pop('percep_tax', 0)
         self._bill_taxes['other_tax_price'] += self._bill_taxes.pop(
@@ -262,9 +265,9 @@ class NewCellularConverter(CellularConverter):
         date_token='Fecha de Factura: ',
         join_token=' ',
     )
-    front_pages = (2, 3)
-    table_pages = (3, 4)
-    taxes_pages = (2, 3)
+    front_pages = (2, 3, 4)
+    table_pages = (3, 4, 5)
+    taxes_pages = (3, 4)
     taxes_fields = ('internal_tax', 'internal_tax_price',
                     'percep_tax', 'percep_tax_price',
                     'other_tax', 'other_tax_price', 'bill_total')
