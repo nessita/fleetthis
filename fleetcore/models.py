@@ -271,8 +271,9 @@ class Bill(models.Model):
                 if not d[PLAN]:
                     # this phone is disappearing, so there should be a previous
                     # consumption with the plan info that serves for this item
-                    logging.warning('Plan info for %r is not available from '
-                                    'parsed data.', phone)
+                    logging.warning(
+                        'Plan info for %r is not available from parsed data.',
+                        phone)
                     plan = Consumption.objects.filter(phone=phone)
                     if plan.count() == 0:
                         raise Bill.ParseError('Plan info for %r is not '
