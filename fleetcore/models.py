@@ -455,9 +455,6 @@ class Consumption(models.Model):
     # added by hand if needed
     extra = MoneyField('Extra (por equipo/s, o IVA de equipo, etc.)')
 
-    # keep track of the payment of this consumption
-    payed = models.BooleanField()
-
     def __unicode__(self):
         return '%s - Bill from %s - Phone %s' % (self.bill.fleet.provider,
                                                  self.bill.billing_date,

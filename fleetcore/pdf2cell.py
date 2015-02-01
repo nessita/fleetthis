@@ -92,7 +92,8 @@ class CellularConverter(PDFPageAggregator):
         self.doc.initialize(password)
         # Check if the document allows text extraction. If not, abort.
         if not self.doc.is_extractable:
-            raise PDFTextExtractionNotAllowed('PDF text extraction not allowed.')
+            raise PDFTextExtractionNotAllowed(
+                'PDF text extraction not allowed.')
         # Create a PDF resource manager object that stores shared resources.
         self.rsrcmgr = PDFResourceManager()
         # Set parameters for analysis.

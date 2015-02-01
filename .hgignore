@@ -4,3 +4,4 @@ local_settings.py
 fleetthis/static/
 fleetthis/media/invoices/
 *.pyc
+db.sqlite

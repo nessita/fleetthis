@@ -152,8 +152,7 @@ class ConsumptionAdmin(admin.ModelAdmin):
             'fields': (('penalty_min', 'total_min'),
                        ('penalty_sms', 'total_sms'),
                        'total_before_taxes', 'taxes', 'extra',
-                       'total_before_round',
-                       ('total', 'payed'),)
+                       'total_before_round', 'total')
         }),
         ('Data from provider', {
             'classes': ('collapse',),
