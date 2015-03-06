@@ -5,12 +5,15 @@ from __future__ import print_function
 
 from datetime import date, timedelta
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, render
 
 from fleetcore.decorators import leadership_required
 from fleetcore.models import Consumption
+
+
+User = get_user_model()
 
 
 def _render_user_information(request, user):

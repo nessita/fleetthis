@@ -8,7 +8,6 @@ import logging
 import os
 
 from collections import defaultdict, OrderedDict
-from datetime import datetime
 from decimal import Decimal
 from itertools import tee
 
@@ -82,7 +81,7 @@ class Fleet(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     account_number = models.PositiveIntegerField()
     email = models.EmailField()
-    provider = models.CharField(max_length=100)
+    provider = models.CharField(max_length=256)
     report_consumption_template = models.TextField(blank=True)
 
     def __unicode__(self):
@@ -168,7 +167,7 @@ class Bill(models.Model):
 
     def _apply_partial_penalty(self, data, penalty, attr_name, attr_total):
         # sort ascending
-        totals = pairwise(sorted(data.iterkeys()))
+        totals = pairwise(sorted(data.keys()))
         for total1, total2 in totals:
             # distribute penalty within the same category
             cons = data[total1]
@@ -202,7 +201,7 @@ class Bill(models.Model):
                 break
 
         # penalty was fully applied, save all consumptions
-        for consumptions in data.itervalues():
+        for consumptions in data.values():
             for c in consumptions:
                 if c is not None:
                     c.save()
@@ -320,7 +319,7 @@ class Bill(models.Model):
             Consumption.objects.create(phone=phone, bill=self, plan=plan,
                                        **kwargs)
 
-        self.parsing_date = datetime.now()
+        self.parsing_date = now()
         self.save()
 
     def calculate_penalties(self):
@@ -423,7 +422,7 @@ class Phone(models.Model):
 
     @property
     def active(self):
-        return self.active_to is None or self.active_to > datetime.now()
+        return self.active_to is None or self.active_to > now()
 
 
 class Consumption(models.Model):

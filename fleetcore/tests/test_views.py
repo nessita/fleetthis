@@ -106,9 +106,8 @@ class UserDetailsTestCase(BaseViewTestCase):
         url = reverse('user-details', args=['foo'])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        context = response.context_data
-        self.assertEqual(context.get('current_user'), self.user)
-        self.assertEqual(context.get('consumptions').count(), 1)
+        self.assertEqual(response.context['current_user'], self.user)
+        self.assertEqual(response.context['consumptions'].count(), 1)
 
 
 class ConsumptionHistoryTestCase(BaseViewTestCase):
@@ -124,9 +123,8 @@ class ConsumptionHistoryTestCase(BaseViewTestCase):
         url = reverse('consumption-history')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        context = response.context_data
-        self.assertEqual(context.get('current_user'), self.user)
-        self.assertEqual(context.get('consumptions').count(), 2)
+        self.assertEqual(response.context['current_user'], self.user)
+        self.assertEqual(response.context['consumptions'].count(), 2)
 
     def test_leadership_required(self):
         self.client.login(username=self.username, password=self.password)
@@ -139,6 +137,5 @@ class ConsumptionHistoryTestCase(BaseViewTestCase):
         url = reverse('user-consumption-history', args=['foo'])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        context = response.context_data
-        self.assertEqual(context.get('current_user'), self.user)
-        self.assertEqual(context.get('consumptions').count(), 2)
+        self.assertEqual(response.context['current_user'], self.user)
+        self.assertEqual(response.context['consumptions'].count(), 2)

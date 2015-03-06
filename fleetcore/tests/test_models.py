@@ -10,8 +10,9 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from django.core.files import File
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.test import TransactionTestCase
+from django.utils.timezone import now
 from mock import patch
 
 from fleetcore.models import (
@@ -26,7 +27,6 @@ from fleetcore.models import (
     SMSPack,
 )
 from fleetcore.pdf2cell import (
-    EQUIPMENT_PRICE,
     EXCEEDED_MIN,
     EXCEEDED_MIN_PRICE,
     IDL_MIN,
@@ -47,6 +47,7 @@ from fleetcore.pdf2cell import (
 )
 from fleetcore.tests.factory import Factory
 
+User = get_user_model()
 TEST_FILES_DIR = os.path.join(os.path.dirname(__file__), 'files')
 PDF_PARSED_SAMPLE = {
     'bill_date': datetime(2011, 10, 13),
@@ -58,14 +59,17 @@ PDF_PARSED_SAMPLE = {
         [1234567890, 'Foo, Bar', 'PLAN1',
          # MONTHLY_PRICE, SERVICES, REFUNDS,
          Decimal('35.0'), Decimal('45.0'), Decimal('0.0'),
-         # INCLUDED_MIN, EXCEEDED_MIN, EXCEEDED_MIN_PRICE,
+         # INCLUDED_MIN,
+         # EXCEEDED_STABLISHING_MIN, EXCEEDED_STABLISHING_MIN_PRICE,
          Decimal('103.0'), Decimal('0.0'), Decimal('0.0'),
-         # NDL_MIN, NDL_PRICE, IDL_MIN,
-         Decimal('0.0'), Decimal('0.0'), Decimal('0.0'),
-         # IDL_PRICE, SMS, SMS_PRICE,
-         Decimal('0.0'), Decimal('45.0'), Decimal('10.80'),
-         # EQUIPMENT_PRICE, OTHER_PRICE, TOTAL_PRICE
-         Decimal('0.0'), Decimal('0.0'), Decimal('90.80')],
+         # EXCEEDED_MIN, EXCEEDED_MIN_PRICE,
+         Decimal('0.0'), Decimal('0.0'),
+         # NDL_MIN, NDL_PRICE, IDL_MIN, IDL_PRICE
+         Decimal('0.0'), Decimal('0.0'), Decimal('0.0'), Decimal('0.0'), 
+         # SMS, SMS_PRICE,
+         Decimal('45.0'), Decimal('10.80'),
+         # OTHER_PRICE, TOTAL_PRICE
+         Decimal('0.0'), Decimal('90.80')],
         [1987654320, 'Skywalker, Luke', 'PLAN2',
          Decimal('35.0'), Decimal('0.0'), Decimal('0.0'),
          Decimal('190.0'), Decimal('0.0'), Decimal('0.0'),
@@ -98,7 +102,7 @@ class BaseModelTestCase(TransactionTestCase):
     def test_id(self):
         """Model can be created and stored."""
         if self.model is not None:
-            self.assertEqual(self.obj.id, 1)
+            self.assertGreater(self.obj.id, 0)
             self.obj.save()
 
 
@@ -171,7 +175,6 @@ class ParseInvoiceTestCase(BillTestCase):
         self.assertEqual(c.idl_min_price, data[IDL_PRICE])
         self.assertEqual(c.sms, data[SMS])
         self.assertEqual(c.sms_price, data[SMS_PRICE])
-        self.assertEqual(c.equipment_price, data[EQUIPMENT_PRICE])
         self.assertEqual(c.other_price, data[OTHER_PRICE])
         self.assertEqual(c.reported_total, data[TOTAL_PRICE])
 
@@ -230,9 +233,9 @@ class ParseInvoiceTestCase(BillTestCase):
         self.test_missing_one_phone()
         self._make_phone(plan='PLAN2', number='1987654320')
 
-        now = datetime.now()
-        with patch('fleetcore.models.datetime') as mock_date:
-            mock_date.now.return_value = now
+        now = now()
+        with patch('fleetcore.models.now') as mock_date:
+            mock_date.return_value = now
             # both phones are in the system, so parse should succeed
             self.obj.parse_invoice()
 
@@ -539,20 +542,20 @@ class PhoneTestCase(BaseModelTestCase):
         self.assertTrue(self.obj.active)
 
     def test_inactive(self):
-        self.obj.active_to = datetime.now()
+        self.obj.active_to = now()
         self.obj.save()
 
         assert self.obj.active_to > self.obj.active_since
-        assert datetime.now() > self.obj.active_to
+        assert now() > self.obj.active_to
 
         self.assertFalse(self.obj.active)
 
     def test_inactive_in_the_future(self):
-        self.obj.active_to = datetime.now() + timedelta(days=1)
+        self.obj.active_to = now() + timedelta(days=1)
         self.obj.save()
 
         assert self.obj.active_to > self.obj.active_since
-        assert datetime.now() < self.obj.active_to
+        assert now() < self.obj.active_to
 
         self.assertTrue(self.obj.active)
 

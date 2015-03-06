@@ -27,7 +27,7 @@ class Factory(object):
         return ''.join(random.choice(string.ascii_letters + string.digits)
                        for i in range(length))
 
-    def make_random_number(self, digits=10):
+    def make_random_number(self, digits=3):
         return int(random.random() * (10 ** digits))
 
     def make_user(self, **kwargs):

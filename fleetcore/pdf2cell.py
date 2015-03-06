@@ -15,7 +15,7 @@ from pdfminer.pdfparser import (
     PDFSyntaxError,
 )
 from pdfminer.converter import PDFPageAggregator
-from pdfminer.pdfparser import PDFParser, PDFDocument
+from pdfminer.pdfparser import PDFDocument, PDFNoValidXRef, PDFParser
 from pdfminer.pdfinterp import (
     PDFPageInterpreter, PDFResourceManager, PDFTextExtractionNotAllowed,
 )
@@ -281,7 +281,7 @@ def parse_file(fname, format='new'):
         else:
             device = NewCellularConverter(input_fd)
         result = device.gather_phone_info()
-    except PDFSyntaxError:
+    except (PDFSyntaxError, PDFNoValidXRef):
         result = {}
 
     return result

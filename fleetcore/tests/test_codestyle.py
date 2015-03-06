@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 import os
 
 from collections import defaultdict
-from cStringIO import StringIO
+from io import StringIO
 from unittest import TestCase
 
 import pep8
