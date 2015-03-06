@@ -7,11 +7,10 @@ from datetime import date, timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.shortcuts import get_object_or_404
-from django.template.response import TemplateResponse
+from django.shortcuts import get_object_or_404, render
 
+from fleetcore.decorators import leadership_required
 from fleetcore.models import Consumption
-from fleetusers.decorators import leadership_required
 
 
 def _render_user_information(request, user):
@@ -19,17 +18,17 @@ def _render_user_information(request, user):
     recent_consumptions = Consumption.objects.filter(
         phone__user=user,
         bill__billing_date__gte=a_year_before).order_by('-bill__billing_date')
-    return TemplateResponse(request, template='fleetcore/index.html',
-                            context={'current_user': user,
-                                     'consumptions': recent_consumptions})
+    return render(
+        request, template='fleetcore/index.html',
+        context={'current_user': user, 'consumptions': recent_consumptions})
 
 
 def _render_user_history(request, user):
     consumptions = Consumption.objects.filter(
         phone__user=user).order_by('-bill__billing_date')
-    return TemplateResponse(request, template='fleetcore/history.html',
-                            context={'current_user': user,
-                                     'consumptions': consumptions})
+    return render(
+        request, template='fleetcore/history.html',
+        context={'current_user': user, 'consumptions': consumptions})
 
 
 @login_required

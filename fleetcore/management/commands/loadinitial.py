@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 
 from fleetcore.models import DataPack, Fleet, Plan, Phone, SMSPack

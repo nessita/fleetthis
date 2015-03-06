@@ -4,17 +4,15 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import itertools
-import logging
 import os
 
-from copy import deepcopy
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from django.core.files import File
 from django.contrib.auth.models import User
 from django.test import TransactionTestCase
-from mock import call, patch
+from mock import patch
 
 from fleetcore.models import (
     Bill,
@@ -25,6 +23,7 @@ from fleetcore.models import (
     Phone,
     Plan,
     SMSPack,
+    UserProfile,
 )
 from fleetcore.pdf2cell import (
     EQUIPMENT_PRICE,
@@ -101,6 +100,12 @@ class BaseModelTestCase(TransactionTestCase):
         if self.model is not None:
             self.assertEqual(self.obj.id, 1)
             self.obj.save()
+
+
+class UserProfileTestCase(BaseModelTestCase):
+    """The test suite for the UserProfile model."""
+
+    model = UserProfile
 
 
 class BillTestCase(BaseModelTestCase):
@@ -190,7 +195,7 @@ class ParseInvoiceTestCase(BillTestCase):
 
         path = os.path.join(TEST_FILES_DIR, 'empty.pdf')
         assert not os.path.exists(path)
-        with open(path, 'w') as f:
+        with open(path, 'w'):
             self.addCleanup(os.remove, path)
 
         self.obj.invoice = File(path)
@@ -203,7 +208,7 @@ class ParseInvoiceTestCase(BillTestCase):
         assert Consumption.objects.count() == 0
 
         path = self.obj.invoice.path
-        with open(path, 'w') as f:
+        with open(path, 'w'):
             self.addCleanup(os.remove, path)
         assert os.path.exists(self.obj.invoice.path)
 
@@ -266,7 +271,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
         for p in data:
             self._make_consumption(self.plan1, p)
 
-        with open(self.obj.invoice.path, 'w') as f:
+        with open(self.obj.invoice.path, 'w'):
             self.addCleanup(os.remove, self.obj.invoice.path)
         self.mock_pdf_parser.return_value = {}
         self.obj.parse_invoice()

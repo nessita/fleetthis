@@ -10,7 +10,6 @@ admin.autodiscover()
 
 urlpatterns = patterns('',
     url(r'^$', 'fleetcore.views.home', name='home'),
-    url(r'^fleetusers/', include('fleetusers.urls')),
     url(r'^fleetcore/', include('fleetcore.urls')),
     url(r'^admin/', include(admin.site.urls)),
 )

@@ -6,7 +6,6 @@ from __future__ import print_function
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template import Context, Template
-from django.template.loader import render_to_string
 
 
 SUBJECT = 'Total del celu (consumo de %s)'

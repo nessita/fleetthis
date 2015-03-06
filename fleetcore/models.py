@@ -10,12 +10,12 @@ import os
 from collections import defaultdict, OrderedDict
 from datetime import datetime
 from decimal import Decimal
-from itertools import tee, izip
+from itertools import tee
 
-from django.contrib.auth.models import User
+from django.conf import settings
+from django.contrib.auth.models import AbstractUser
 from django.db import models, transaction
 from django.db.models import Sum
-from django.db.models.signals import post_save
 
 from fleetcore.fields import (
     MinuteField,
@@ -43,14 +43,26 @@ from fleetcore.pdf2cell import (
     TOTAL_PRICE,
     USER,
 )
-from fleetusers.models import UserProfile
 
 
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
     a, b = tee(iterable)
     next(b, None)
-    return izip(a, b)
+    return zip(a, b)
+
+
+class UserProfile(AbstractUser):
+    leader = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name='leadering', null=True)
+
+    def __unicode__(self):
+        leader = self.leader
+        if self.leader is not None:
+            leader = self.leader.get_full_name() or self.leader
+        if leader:
+            leader = ' (leadered by %s)' % leader
+        return '%s - %s%s' % (self.user, self.user.get_full_name(), leader)
 
 
 class LeaderTriangle(object):
@@ -59,13 +71,14 @@ class LeaderTriangle(object):
         u = leader.user
         users = list(UserProfile.objects.filter(leader=u)) + [u]
         self.consumptions = self.consumption_set.filter(phone__user__in=users)
-        if consumptions:
-            self.total = consumptions.aggregate(total=Sum('total'))['total']
+        if self.consumptions:
+            totals = self.consumptions.aggregate(total=Sum('total'))
+            self.total = totals['total']
 
 
 class Fleet(models.Model):
     """Phones fleet."""
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL)
     account_number = models.PositiveIntegerField()
     email = models.EmailField()
     provider = models.CharField(max_length=100)
@@ -131,7 +144,7 @@ class Bill(models.Model):
     @property
     def details(self, user=None):
         if user is None:
-            user = User.objects.get(is_superuser=True)
+            user = UserProfile.objects.get(is_superuser=True)
 
         # group consumptions per leader
         data = OrderedDict()
@@ -390,7 +403,7 @@ class SMSPack(models.Model):
 class Phone(models.Model):
     """Phone line."""
     number = models.PositiveIntegerField()
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL)
     current_plan = models.ForeignKey(Plan)
     data_pack = models.ForeignKey(DataPack, blank=True, null=True)
     sms_pack = models.ForeignKey(SMSPack, blank=True, null=True)

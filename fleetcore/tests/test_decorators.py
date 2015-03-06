@@ -1,11 +1,35 @@
-from django.contrib.auth.models import User
+from django.conf.urls import patterns, url
+from django.contrib.auth import get_auth_model
 from django.core.urlresolvers import reverse
+from django.http import HttpResponse
 from django.test import TestCase
+
+from fleetcore.decorators import leadership_required
+
+User = get_auth_model()
+
+
+def home(request):
+    return HttpResponse('Home')
+
+
+@leadership_required
+def test_view(request, username):
+    return HttpResponse('OK')
+
+
+urlpatterns = patterns(
+    '',
+    url(r'^$', home, name='home'),
+    url(r'^logout/$', 'django.contrib.auth.views.logout', name='logout'),
+    url(r'^test-leadership-required/(?P<username>[\w-]+)/$', test_view,
+        name='test-leadership'),
+)
 
 
 class LeadershipRequiredTestCase(TestCase):
-    urls = 'fleetusers.tests.test_urls'
-    
+    urls = 'fleetcore.tests.test_decorators'
+
     def setUp(self):
         self.url = reverse('test-leadership', args=['user'])
         self.admin = User.objects.create_user(username='admin',

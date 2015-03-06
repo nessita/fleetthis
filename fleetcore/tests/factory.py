@@ -1,16 +1,9 @@
 # coding: utf-8
 
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import random
 import string
 
-from datetime import date, datetime, timedelta
-from decimal import Decimal
-from functools import partial
-
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 
 from fleetcore.models import (
     Bill,
@@ -24,12 +17,15 @@ from fleetcore.models import (
 )
 
 
+User = get_user_model()
+
+
 class Factory(object):
     """A factory of models."""
 
     def make_random_string(self, length=10):
-        return ''.join(random.choice(string.letters + string.digits)
-                       for i in xrange(length))
+        return ''.join(random.choice(string.ascii_letters + string.digits)
+                       for i in range(length))
 
     def make_random_number(self, digits=10):
         return int(random.random() * (10 ** digits))

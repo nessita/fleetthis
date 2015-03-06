@@ -6,8 +6,6 @@ from __future__ import unicode_literals
 import logging
 import os
 
-from datetime import datetime
-from decimal import Decimal
 from unittest import TestCase
 
 from fleetcore import pdf2cell

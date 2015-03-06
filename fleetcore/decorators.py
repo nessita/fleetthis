@@ -1,9 +1,11 @@
 from functools import wraps
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import available_attrs
+
+
+User = get_user_model()
 
 
 def leadership_required(view_func):
@@ -15,7 +17,6 @@ def leadership_required(view_func):
     """
     @wraps(view_func)
     def _decorated_view(request, username, *args, **kwargs):
-        logged_in_user = request.user
         another_user = get_object_or_404(User, username=username)
         profile = another_user.get_profile()
 

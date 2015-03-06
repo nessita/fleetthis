@@ -5,13 +5,14 @@ from __future__ import unicode_literals
 
 from datetime import date, timedelta
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 from django.test import TestCase
-from mock import patch
 
-import fleetcore
 from fleetcore.tests.factory import Factory
+
+
+User = get_user_model()
 
 
 class BaseViewTestCase(TestCase):
@@ -26,8 +27,10 @@ class BaseViewTestCase(TestCase):
         self._create_test_data()
 
     def _create_test_data(self):
-        self.user = User.objects.create_user(username=self.username,
-                                             password=self.password)
+        self.leader = User.objects.create_user(
+            username='leader', password='leader')
+        self.user = User.objects.create_user(
+            username=self.username, password=self.password, leader=self.leader)
 
         self.consumption = self.factory.make_consumption(user=self.user)
         bill = self.consumption.bill
@@ -39,12 +42,6 @@ class BaseViewTestCase(TestCase):
         bill = self.old_consumption.bill
         bill.billing_date = date.today() - timedelta(days=400)
         bill.save()
-
-        self.leader = User.objects.create_user(username='leader',
-                                               password='leader')
-        profile = self.user.get_profile()
-        profile.leader = self.leader
-        profile.save()
 
 
 class AnonymousTestCase(BaseViewTestCase):

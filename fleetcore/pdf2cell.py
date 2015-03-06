@@ -3,8 +3,6 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
-import logging
-import os
 import re
 import sys
 
@@ -12,23 +10,15 @@ from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 
-from pdfminer.converter import (
-    enc,
-    TextConverter,
-)
-from pdfminer.layout import *
-from pdfminer.pdfinterp import (
-    PDFResourceManager,
-    process_pdf,
-)
+# from pdfminer.layout import *
 from pdfminer.pdfparser import (
     PDFSyntaxError,
 )
-from pdfminer.converter import PDFPageAggregator, HTMLConverter
-from pdfminer.layout import LAParams
+from pdfminer.converter import PDFPageAggregator
 from pdfminer.pdfparser import PDFParser, PDFDocument
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
-from pdfminer.pdfdevice import PDFDevice
+from pdfminer.pdfinterp import (
+    PDFPageInterpreter, PDFResourceManager, PDFTextExtractionNotAllowed,
+)
 
 (PHONE_NUMBER, USER, PLAN, MONTHLY_PRICE, SERVICES, REFUNDS,
  INCLUDED_MIN,
@@ -122,7 +112,7 @@ class CellularConverter(PDFPageAggregator):
             rest = PHONE_ROW_RE.findall(rest)
             self._phone_data.append(
                 [phone, notes, plan] +
-                [Decimal(i.strip().replace(',', '.')) for i in rest]
+                [Decimal(n.strip().replace(',', '.')) for n in rest]
             )
 
     def _extract_all_text(self, page):

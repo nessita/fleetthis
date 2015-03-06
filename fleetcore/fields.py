@@ -1,7 +1,7 @@
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db import models
-from south.modelsinspector import add_introspection_rules
 
 
 class MoneyField(models.DecimalField):
@@ -10,9 +10,6 @@ class MoneyField(models.DecimalField):
         default = dict(default=Decimal('0'), decimal_places=3, max_digits=10)
         default.update(kwargs)
         super(MoneyField, self).__init__(*args, **default)
-
-
-add_introspection_rules([], ["^fleetcore\.fields\.MoneyField"])
 
 
 def validate_tax(value):
@@ -33,9 +30,6 @@ class TaxField(models.DecimalField):
         super(TaxField, self).__init__(*args, **kwargs)
 
 
-add_introspection_rules([], ["^fleetcore\.fields\.TaxField"])
-
-
 class MinuteField(models.DecimalField):
     """Field to store a minutes value."""
     def __init__(self, *args, **kwargs):
@@ -44,15 +38,9 @@ class MinuteField(models.DecimalField):
         super(MinuteField, self).__init__(*args, **default)
 
 
-add_introspection_rules([], ["^fleetcore\.fields\.MinuteField"])
-
-
 class SMSField(models.PositiveIntegerField):
     """Field to store a SMS units value."""
     def __init__(self, *args, **kwargs):
         default = dict(default=0)
         default.update(kwargs)
         super(SMSField, self).__init__(*args, **default)
-
-
-add_introspection_rules([], ["^fleetcore\.fields\.SMSField"])

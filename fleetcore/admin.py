@@ -3,12 +3,8 @@
 from __future__ import unicode_literals
 from __future__ import print_function
 
-from django import forms
 from django.conf.urls import patterns, url
 from django.contrib import admin, messages
-from django.contrib.auth.admin import GroupAdmin, UserAdmin
-from django.contrib.auth.models import Group, User
-from django.core.urlresolvers import reverse
 from django.db import models
 from django.forms.widgets import TextInput
 from django.http import HttpResponseRedirect
@@ -16,7 +12,6 @@ from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from django.utils.translation import ugettext_lazy as _
 
-from fleetusers.models import UserProfile
 from fleetcore.models import (
     Bill,
     Consumption,
@@ -26,6 +21,7 @@ from fleetcore.models import (
     Phone,
     Plan,
     SMSPack,
+    UserProfile,
 )
 from fleetcore.sendbills import BillSummarySender
 
@@ -93,7 +89,7 @@ class BillAdmin(admin.ModelAdmin):
         try:
             obj.parse_invoice()
         except Bill.ParseError as e:
-            messages.error(request, error_msg + unicode(e))
+            messages.error(request, error_msg + str(e))
 
         self.recalculate(request, bill_id,
                          msg=_('Invoice processed successfully.'))
@@ -107,7 +103,7 @@ class BillAdmin(admin.ModelAdmin):
         try:
             obj.calculate_penalties()
         except Bill.AdjustmentError as e:
-            messages.error(request, error_msg + unicode(e))
+            messages.error(request, error_msg + str(e))
         else:
             msg = msg or _('Penalties re-calculated successfully.')
             messages.success(request, msg)
@@ -124,7 +120,7 @@ class BillAdmin(admin.ModelAdmin):
                 sender.send_reports(dry_run=False)
             except Exception as e:
                 msg = _('Notification error.')
-                msg += ' Error: %s' % unicode(e)
+                msg += ' Error: %s' % str(e)
                 messages.error(request, msg)
             else:
                 msg = _('Notifications sent successfully.')
