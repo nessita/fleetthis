@@ -482,14 +482,14 @@ class Consumption(models.Model):
         return self.sms + self.penalty_sms
 
     def save(self, *args, **kwargs):
-        self.mins = self.included_min + self.exceeded_min
+        self.mins = Decimal(self.included_min) + Decimal(self.exceeded_min)
 
         total = self.reported_total
         plan = self.plan
         if plan.with_min_clearing:
             total -= self.monthly_price
             # do not use total_min since it includes the exceeded_min
-            total += (self.included_min + self.penalty_min) * plan.price_min
+            total += (Decimal(self.included_min) + Decimal(self.penalty_min)) * Decimal(plan.price_min)
 
             if plan.with_sms_clearing:
                 # calculate real amount of sms to be charged for
