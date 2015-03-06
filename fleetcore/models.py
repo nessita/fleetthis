@@ -25,7 +25,6 @@ from fleetcore.fields import (
 )
 from fleetcore import pdf2cell
 from fleetcore.pdf2cell import (
-    EQUIPMENT_PRICE,
     EXCEEDED_MIN,
     EXCEEDED_MIN_PRICE,
     IDL_MIN,
@@ -301,7 +300,6 @@ class Bill(models.Model):
                 idl_min_price=d[IDL_PRICE],
                 sms=d[SMS],
                 sms_price=d[SMS_PRICE],
-                equipment_price=d[EQUIPMENT_PRICE],
                 other_price=d[OTHER_PRICE],
                 reported_total=d[TOTAL_PRICE],
             )
