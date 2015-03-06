@@ -27,12 +27,12 @@ ALLOWED_HOSTS = ['fleetthis.com.ar']
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'db.sqlite',                      # Or path to database file if using sqlite3.
-        'USER': '',                      # Not used with sqlite3.
-        'PASSWORD': '',                  # Not used with sqlite3.
-        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'fleetthis',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': '127.0.0.1',
+        'PORT': '5432',
     }
 }
 
@@ -115,12 +115,12 @@ ADMINS = (('Owner', 'fleetthis@gmail.com'),)
 SITE_ID = 1
 SITE_DOMAIN = 'fleetthis.com.ar'
 
-AUTH_USER_MODEL = 'fleetcore.UserProfile'
+AUTH_USER_MODEL = 'fleetcore.FleetUser'
 LOGIN_REDIRECT_URL = 'home'
 LOGIN_URL = 'login'
 LOGOUT_URL = 'logout'
 
-IS_PROD = False
+IS_PROD = True
 
 try:
     from fleetthis.local_settings import *

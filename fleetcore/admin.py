@@ -17,11 +17,11 @@ from fleetcore.models import (
     Consumption,
     DataPack,
     Fleet,
+    FleetUser,
     Penalty,
     Phone,
     Plan,
     SMSPack,
-    UserProfile,
 )
 from fleetcore.sendbills import BillSummarySender
 
@@ -192,7 +192,7 @@ admin.site.register(Bill, BillAdmin)
 admin.site.register(Consumption, ConsumptionAdmin)
 admin.site.register(DataPack)
 admin.site.register(Fleet)
+admin.site.register(FleetUser)
 admin.site.register(Phone, PhoneAdmin)
 admin.site.register(Plan)
-admin.site.register(UserProfile)
 admin.site.register(SMSPack)

@@ -19,11 +19,11 @@ from fleetcore.models import (
     Consumption,
     DataPack,
     Fleet,
+    FleetUser,
     Penalty,
     Phone,
     Plan,
     SMSPack,
-    UserProfile,
 )
 from fleetcore.pdf2cell import (
     EQUIPMENT_PRICE,
@@ -102,10 +102,10 @@ class BaseModelTestCase(TransactionTestCase):
             self.obj.save()
 
 
-class UserProfileTestCase(BaseModelTestCase):
-    """The test suite for the UserProfile model."""
+class FleetUserTestCase(BaseModelTestCase):
+    """The test suite for the FleetUser model."""
 
-    model = UserProfile
+    model = FleetUser
 
 
 class BillTestCase(BaseModelTestCase):

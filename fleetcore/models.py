@@ -16,6 +16,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models, transaction
 from django.db.models import Sum
+from django.utils.timezone import now
 
 from fleetcore.fields import (
     MinuteField,
@@ -52,7 +53,7 @@ def pairwise(iterable):
     return zip(a, b)
 
 
-class UserProfile(AbstractUser):
+class FleetUser(AbstractUser):
     leader = models.ForeignKey(
         settings.AUTH_USER_MODEL, related_name='leadering', null=True)
 
@@ -69,7 +70,7 @@ class LeaderTriangle(object):
 
     def __init__(self, leader):
         u = leader.user
-        users = list(UserProfile.objects.filter(leader=u)) + [u]
+        users = list(FleetUser.objects.filter(leader=u)) + [u]
         self.consumptions = self.consumption_set.filter(phone__user__in=users)
         if self.consumptions:
             totals = self.consumptions.aggregate(total=Sum('total'))
@@ -107,7 +108,7 @@ class Bill(models.Model):
     billing_total = MoneyField()
     billing_debt = MoneyField()
     parsing_date = models.DateTimeField(null=True, blank=True)
-    upload_date = models.DateTimeField(default=datetime.now)
+    upload_date = models.DateTimeField(default=now)
     provider_number = models.CharField(max_length=50, blank=True)
     internal_tax = TaxField(default=Decimal('0.0417'))
     iva_tax = TaxField(default=Decimal('0.27'))
@@ -144,14 +145,14 @@ class Bill(models.Model):
     @property
     def details(self, user=None):
         if user is None:
-            user = UserProfile.objects.get(is_superuser=True)
+            user = FleetUser.objects.get(is_superuser=True)
 
         # group consumptions per leader
         data = OrderedDict()
-        leaders = UserProfile.objects.filter(leader=user)
+        leaders = FleetUser.objects.filter(leader=user)
         for leader in leaders.order_by('user__first_name'):
             u = leader.user
-            users = list(UserProfile.objects.filter(leader=u)) + [u]
+            users = list(FleetUser.objects.filter(leader=u)) + [u]
             consumptions = self.consumption_set.filter(phone__user__in=users)
             if consumptions:
                 total = consumptions.aggregate(total=Sum('total'))['total']
@@ -408,7 +409,7 @@ class Phone(models.Model):
     data_pack = models.ForeignKey(DataPack, blank=True, null=True)
     sms_pack = models.ForeignKey(SMSPack, blank=True, null=True)
     notes = models.TextField(blank=True)
-    active_since = models.DateTimeField(default=datetime.today)
+    active_since = models.DateTimeField(default=now)
     active_to = models.DateTimeField(null=True, blank=True)
 
     class Meta:

@@ -18,9 +18,8 @@ def leadership_required(view_func):
     @wraps(view_func)
     def _decorated_view(request, username, *args, **kwargs):
         another_user = get_object_or_404(User, username=username)
-        profile = another_user.get_profile()
 
-        if request.user.is_superuser or profile.leader == request.user:
+        if request.user.is_superuser or another_user.leader == request.user:
             return view_func(request, username, *args, **kwargs)
         else:
             raise Http404

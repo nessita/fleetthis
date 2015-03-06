@@ -19,16 +19,16 @@ def _render_user_information(request, user):
         phone__user=user,
         bill__billing_date__gte=a_year_before).order_by('-bill__billing_date')
     return render(
-        request, template='fleetcore/index.html',
-        context={'current_user': user, 'consumptions': recent_consumptions})
+        request, 'fleetcore/index.html',
+        {'current_user': user, 'consumptions': recent_consumptions})
 
 
 def _render_user_history(request, user):
     consumptions = Consumption.objects.filter(
         phone__user=user).order_by('-bill__billing_date')
     return render(
-        request, template='fleetcore/history.html',
-        context={'current_user': user, 'consumptions': consumptions})
+        request, 'fleetcore/history.html',
+        {'current_user': user, 'consumptions': consumptions})
 
 
 @login_required
