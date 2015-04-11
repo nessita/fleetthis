@@ -65,7 +65,7 @@ PDF_PARSED_SAMPLE = {
          # EXCEEDED_MIN, EXCEEDED_MIN_PRICE,
          Decimal('0.0'), Decimal('0.0'),
          # NDL_MIN, NDL_PRICE, IDL_MIN, IDL_PRICE
-         Decimal('0.0'), Decimal('0.0'), Decimal('0.0'), Decimal('0.0'), 
+         Decimal('0.0'), Decimal('0.0'), Decimal('0.0'), Decimal('0.0'),
          # SMS, SMS_PRICE,
          Decimal('45.0'), Decimal('10.80'),
          # OTHER_PRICE, TOTAL_PRICE
@@ -73,9 +73,10 @@ PDF_PARSED_SAMPLE = {
         [1987654320, 'Skywalker, Luke', 'PLAN2',
          Decimal('35.0'), Decimal('0.0'), Decimal('0.0'),
          Decimal('190.0'), Decimal('0.0'), Decimal('0.0'),
-         Decimal('0.0'), Decimal('0.0'), Decimal('0.0'),
-         Decimal('0.0'), Decimal('19.0'), Decimal('0.0'),
-         Decimal('0.0'), Decimal('0.0'), Decimal('35.0')],
+         Decimal('0.0'), Decimal('0.0'),
+         Decimal('0.0'), Decimal('0.0'), Decimal('19.0'), Decimal('0.0'),
+         Decimal('0.0'), Decimal('0.0'),
+         Decimal('0.0'), Decimal('35.0')],
     ],
 }
 
@@ -233,9 +234,9 @@ class ParseInvoiceTestCase(BillTestCase):
         self.test_missing_one_phone()
         self._make_phone(plan='PLAN2', number='1987654320')
 
-        now = now()
+        right_now = now()
         with patch('fleetcore.models.now') as mock_date:
-            mock_date.return_value = now
+            mock_date.return_value = right_now
             # both phones are in the system, so parse should succeed
             self.obj.parse_invoice()
 
@@ -248,7 +249,7 @@ class ParseInvoiceTestCase(BillTestCase):
         self.assertEqual(bill.billing_date, date(2011, 10, 13))
         self.assertEqual(bill.billing_total, Decimal('1234.56'))
         self.assertEqual(bill.billing_debt, Decimal('123.45'))
-        self.assertEqual(bill.parsing_date, now)
+        self.assertEqual(bill.parsing_date, right_now)
         self.assertEqual(bill.provider_number, '123456abcd')
 
         for d in PDF_PARSED_SAMPLE['phone_data']:
@@ -418,8 +419,8 @@ class CalculatePenaltiesTestCase(BillTestCase):
     def test_with_other_bills(self):
         bill = self.factory.make_bill()
         plan2 = Plan.objects.create(name='PLAN2', included_min=333)
-        self._make_consumption(plan2, 7539518520, bill=bill)
-        self._make_consumption(plan2, 7539518521, bill=bill)
+        self._make_consumption(plan2, 1539518520, bill=bill)
+        self._make_consumption(plan2, 1539518521, bill=bill)
         assert plan2.with_min_clearing
 
         self.plan1.included_min = 0  # do not have spare minutes

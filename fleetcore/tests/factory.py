@@ -30,14 +30,14 @@ class Factory(object):
     def make_random_number(self, digits=3):
         return int(random.random() * (10 ** digits))
 
-    def make_user(self, **kwargs):
+    def make_fleetuser(self, **kwargs):
         _kwargs = dict(username='username-%s' % self.make_random_number())
         _kwargs.update(kwargs)
         result = User.objects.create_user(**_kwargs)
         return result
 
     def make_admin_user(self, **kwargs):
-        result = self.make_user(**kwargs)
+        result = self.make_fleetuser(**kwargs)
         result.is_staff = True
         result.is_superuser = True
         result.save()
@@ -49,7 +49,7 @@ class Factory(object):
         return model_class.objects.create(**_kwargs)
 
     def make_fleet(self, **kwargs):
-        default = dict(user=self.make_user(),
+        default = dict(user=self.make_fleetuser(),
                        account_number=self.make_random_number(),
                        provider=self.make_random_string())
         return self.make_something(Fleet, default, **kwargs)
@@ -71,7 +71,8 @@ class Factory(object):
         return self.make_something(SMSPack, default, **kwargs)
 
     def make_phone(self, user=None, **kwargs):
-        user = user if user is not None else self.make_user()
+        if user is None:
+            user = self.make_fleetuser()
         default = dict(number=self.make_random_number(),
                        user=user, current_plan=self.make_plan())
         return self.make_something(Phone, default, **kwargs)

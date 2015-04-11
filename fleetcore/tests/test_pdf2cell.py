@@ -24,15 +24,7 @@ class ParsePDFTestCase(TestCase):
         super(ParsePDFTestCase, self).setUp()
         self.addCleanup(lambda f: os.path.exists(f) and os.remove(f),
                         self.fname)
-        self._enable_debug()
-
-    def _enable_debug(self):
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
-        logger = logging.getLogger()
-        logger.addHandler(handler)
-        logger.setLevel(logging.DEBUG)
-        self.addCleanup(logger.removeHandler, handler)
+        logging.getLogger().setLevel(logging.ERROR)
 
     def test_non_existing_file(self):
         assert not os.path.exists(self.fname)

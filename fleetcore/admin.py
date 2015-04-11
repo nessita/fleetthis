@@ -83,7 +83,7 @@ class BillAdmin(admin.ModelAdmin):
         return my_urls + urls
 
     def process_invoice(self, request, bill_id):
-        obj = get_object_or_404(self.queryset(request), pk=bill_id)
+        obj = get_object_or_404(self.get_queryset(request), pk=bill_id)
         error_msg = _('Invoice processed unsuccessfully. Error: ')
 
         try:
@@ -97,7 +97,7 @@ class BillAdmin(admin.ModelAdmin):
         return HttpResponseRedirect('..')
 
     def recalculate(self, request, bill_id, msg=None):
-        obj = get_object_or_404(self.queryset(request), pk=bill_id)
+        obj = get_object_or_404(self.get_queryset(request), pk=bill_id)
         error_msg = _('Invoice processed unsuccessfully. Error: ')
 
         try:
@@ -111,7 +111,7 @@ class BillAdmin(admin.ModelAdmin):
         return HttpResponseRedirect('..')
 
     def notify_users(self, request, bill_id):
-        obj = get_object_or_404(self.queryset(request), pk=bill_id)
+        obj = get_object_or_404(self.get_queryset(request), pk=bill_id)
 
         sender = BillSummarySender(bill=obj)
 

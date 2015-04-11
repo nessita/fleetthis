@@ -238,7 +238,7 @@ class Bill(models.Model):
         self._apply_partial_penalty(
             data_sms, penalty.sms, 'penalty_sms', 'total_sms')
 
-    @transaction.commit_on_success
+    @transaction.atomic()
     def parse_invoice(self):
         """Parse this bill's invoice.
 
@@ -489,7 +489,9 @@ class Consumption(models.Model):
         if plan.with_min_clearing:
             total -= self.monthly_price
             # do not use total_min since it includes the exceeded_min
-            total += (Decimal(self.included_min) + Decimal(self.penalty_min)) * Decimal(plan.price_min)
+            total += (
+                (Decimal(self.included_min) + Decimal(self.penalty_min)) *
+                Decimal(plan.price_min))
 
             if plan.with_sms_clearing:
                 # calculate real amount of sms to be charged for
