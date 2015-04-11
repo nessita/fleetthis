@@ -1,8 +1,5 @@
 # coding: utf-8
 
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import itertools
 import os
 
@@ -56,7 +53,7 @@ PDF_PARSED_SAMPLE = {
     'bill_total': Decimal('1234.56'),
     'phone_data': [
         # PHONE_NUMBER, USER, PLAN,
-        [1234567890, 'Foo, Bar', 'PLAN1',
+        ['1234567890', 'Foo, Bar', 'PLAN1',
          # MONTHLY_PRICE, SERVICES, REFUNDS,
          Decimal('35.0'), Decimal('45.0'), Decimal('0.0'),
          # INCLUDED_MIN,
@@ -70,7 +67,7 @@ PDF_PARSED_SAMPLE = {
          Decimal('45.0'), Decimal('10.80'),
          # OTHER_PRICE, TOTAL_PRICE
          Decimal('0.0'), Decimal('90.80')],
-        [1987654320, 'Skywalker, Luke', 'PLAN2',
+        ['1987654320', 'Skywalker, Luke', 'PLAN2',
          Decimal('35.0'), Decimal('0.0'), Decimal('0.0'),
          Decimal('190.0'), Decimal('0.0'), Decimal('0.0'),
          Decimal('0.0'), Decimal('0.0'),

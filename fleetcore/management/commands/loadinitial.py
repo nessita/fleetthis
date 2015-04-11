@@ -1,8 +1,5 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
-from __future__ import print_function
-
 import os
 import unicodedata
 
@@ -226,7 +223,7 @@ class Command(BaseCommand):
             profile.save()
             return user
 
-        for values, children in USERS.iteritems():
+        for values, children in USERS.items():
             leader = create_user(*values)
             for values in children:
                 create_user(*values, leader=leader)

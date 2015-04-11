@@ -1,9 +1,5 @@
 # coding: utf-8
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import logging
 import os
 
@@ -56,20 +52,19 @@ class FleetUser(AbstractUser):
     leader = models.ForeignKey(
         settings.AUTH_USER_MODEL, related_name='leadering', null=True)
 
-    def __unicode__(self):
+    def __str__(self):
         leader = self.leader
         if self.leader is not None:
             leader = self.leader.get_full_name() or self.leader
         if leader:
             leader = ' (leadered by %s)' % leader
-        return '%s - %s%s' % (self.user, self.user.get_full_name(), leader)
+        return '%s - %s%s' % (self.username, self.get_full_name(), leader)
 
 
 class LeaderTriangle(object):
 
     def __init__(self, leader):
-        u = leader.user
-        users = list(FleetUser.objects.filter(leader=u)) + [u]
+        users = list(FleetUser.objects.filter(leader=leader)) + [leader]
         self.consumptions = self.consumption_set.filter(phone__user__in=users)
         if self.consumptions:
             totals = self.consumptions.aggregate(total=Sum('total'))
@@ -79,12 +74,12 @@ class LeaderTriangle(object):
 class Fleet(models.Model):
     """Phones fleet."""
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    account_number = models.PositiveIntegerField()
+    account_number = models.CharField(max_length=128)
     email = models.EmailField()
     provider = models.CharField(max_length=256)
     report_consumption_template = models.TextField(blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return '%s - %s' % (self.provider, self.account_number)
 
 
@@ -131,7 +126,10 @@ class Bill(models.Model):
 
     @property
     def consumptions_total(self):
-        return self.consumption_set.aggregate(total=Sum('total'))['total']
+        result = self.consumption_set.aggregate(total=Sum('total'))['total']
+        if not result:
+            result = Decimal(0)
+        return result
 
     @property
     def outcome_debt(self):
@@ -149,20 +147,19 @@ class Bill(models.Model):
         # group consumptions per leader
         data = OrderedDict()
         leaders = FleetUser.objects.filter(leader=user)
-        for leader in leaders.order_by('user__first_name'):
-            u = leader.user
-            users = list(FleetUser.objects.filter(leader=u)) + [u]
+        for leader in leaders.order_by('first_name'):
+            users = list(FleetUser.objects.filter(leader=leader)) + [leader]
             consumptions = self.consumption_set.filter(phone__user__in=users)
             if consumptions:
                 total = consumptions.aggregate(total=Sum('total'))['total']
-                data[u] = {
+                data[leader] = {
                     'consumptions': consumptions.order_by('phone__number'),
                     'total': total,
                 }
 
         return data
 
-    def __unicode__(self):
+    def __str__(self):
         return 'Bill "%s" (date: %s)' % (self.fleet, self.billing_date)
 
     def _apply_partial_penalty(self, data, penalty, attr_name, attr_total):
@@ -377,7 +374,7 @@ class Plan(models.Model):
     with_min_clearing = models.BooleanField(default=True)
     with_sms_clearing = models.BooleanField(default=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return '%s - $%s' % (self.name, self.price)
 
 
@@ -386,7 +383,7 @@ class DataPack(models.Model):
     kbs = models.PositiveIntegerField(blank=True, null=True)
     price = MoneyField()
 
-    def __unicode__(self):
+    def __str__(self):
         kbs = '%s kbs' % self.kbs if self.kbs else '(unlimited)'
         return '%s - $%s + IMP' % (kbs, self.price)
 
@@ -396,13 +393,13 @@ class SMSPack(models.Model):
     units = SMSField()
     price = MoneyField()
 
-    def __unicode__(self):
+    def __str__(self):
         return '%s sms - $%s + IMP' % (self.units, self.price)
 
 
 class Phone(models.Model):
     """Phone line."""
-    number = models.PositiveIntegerField()
+    number = models.CharField(max_length=10)
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     current_plan = models.ForeignKey(Plan)
     data_pack = models.ForeignKey(DataPack, blank=True, null=True)
@@ -414,7 +411,7 @@ class Phone(models.Model):
     class Meta:
         get_latest_by = 'active_since'
 
-    def __unicode__(self):
+    def __str__(self):
         result = unicode(self.number)
         if self.user.get_full_name():
             result += ' - %s' % self.user.get_full_name()
@@ -466,7 +463,7 @@ class Consumption(models.Model):
     # added by hand if needed
     extra = MoneyField('Extra (por equipo/s, o IVA de equipo, etc.)')
 
-    def __unicode__(self):
+    def __str__(self):
         return '%s - Bill from %s - Phone %s' % (self.bill.fleet.provider,
                                                  self.bill.billing_date,
                                                  self.phone)
@@ -531,6 +528,6 @@ class Penalty(models.Model):
     class Meta:
         unique_together = ('bill', 'plan')
 
-    def __unicode__(self):
+    def __str__(self):
         return 'Penalty of %s minutes for %s (%s)' % (self.minutes, self.bill,
                                                       self.plan)

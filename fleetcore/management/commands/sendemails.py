@@ -1,8 +1,5 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
-from __future__ import print_function
-
 from django.core.management.base import BaseCommand
 
 from fleetcore.models import Bill

@@ -1,8 +1,5 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
-from __future__ import print_function
-
 import re
 import sys
 
@@ -112,7 +109,7 @@ class CellularConverter(PDFPageAggregator):
             rest = row[j + self.plan_length:]
             rest = PHONE_ROW_RE.findall(rest)
             self._phone_data.append(
-                [phone, notes, plan] +
+                [str(phone), notes, plan] +
                 [Decimal(n.strip().replace(',', '.')) for n in rest]
             )
 
@@ -293,7 +290,7 @@ if __name__ == '__main__':
     data = parse_file(fname)
     phone_data = data.pop('phone_data')
     print('-----------------------------')
-    for k, v in data.iteritems():
+    for k, v in data.items():
         print(k, v)
     print('-----------------------------')
     print('\n'.join(map(lambda l: '|'.join(map(unicode, l)), phone_data)))

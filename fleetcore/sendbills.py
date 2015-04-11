@@ -1,8 +1,5 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
-from __future__ import print_function
-
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template import Context, Template
@@ -20,7 +17,7 @@ class BillSummarySender(object):
     def send_reports(self, dry_run=True):
         result = []
         template = Template(self.bill.fleet.report_consumption_template)
-        for leader, data in self.bill.details.iteritems():
+        for leader, data in self.bill.details.items():
             body = template.render(Context({'bill': self.bill, 'data': data,
                                             'leader': leader}))
             subject = SUBJECT % self.bill.billing_date.strftime('%B')

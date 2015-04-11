@@ -23,9 +23,12 @@ User = get_user_model()
 class Factory(object):
     """A factory of models."""
 
-    def make_random_string(self, length=10):
-        return ''.join(random.choice(string.ascii_letters + string.digits)
-                       for i in range(length))
+    def make_random_string(self, length=10, only_digits=False):
+        if only_digits:
+            source = string.digits
+        else:
+            source = string.ascii_letters + string.digits
+        return ''.join(random.choice(source) for i in range(length))
 
     def make_random_number(self, digits=3):
         return int(random.random() * (10 ** digits))
@@ -49,9 +52,10 @@ class Factory(object):
         return model_class.objects.create(**_kwargs)
 
     def make_fleet(self, **kwargs):
-        default = dict(user=self.make_fleetuser(),
-                       account_number=self.make_random_number(),
-                       provider=self.make_random_string())
+        default = dict(
+            user=self.make_fleetuser(),
+            account_number=self.make_random_string(only_digits=True),
+            provider=self.make_random_string())
         return self.make_something(Fleet, default, **kwargs)
 
     def make_bill(self, **kwargs):
@@ -73,8 +77,9 @@ class Factory(object):
     def make_phone(self, user=None, **kwargs):
         if user is None:
             user = self.make_fleetuser()
-        default = dict(number=self.make_random_number(),
-                       user=user, current_plan=self.make_plan())
+        default = dict(
+            number=self.make_random_string(only_digits=True),
+            user=user, current_plan=self.make_plan())
         return self.make_something(Phone, default, **kwargs)
 
     def make_consumption(self, user=None, **kwargs):
