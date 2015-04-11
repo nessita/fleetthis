@@ -23,7 +23,7 @@ DEBUG = False
 
 TEMPLATE_DEBUG = DEBUG
 
-ALLOWED_HOSTS = ['fleetthis.com.ar']
+ALLOWED_HOSTS = ['fleetthis.herokuapp.com']
 
 DATABASES = {
     'default': {
