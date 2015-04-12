@@ -92,6 +92,13 @@ SITE_ID = 1
 SITE_DOMAIN = 'fleetthis.com.ar'
 
 AUTH_USER_MODEL = 'fleetcore.FleetUser'
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.setdefault('EMAIL_HOST_USER', ADMINS[0][1])
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+
 LOGIN_REDIRECT_URL = 'home'
 LOGIN_URL = 'login'
 LOGOUT_URL = 'logout'
