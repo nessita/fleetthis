@@ -11,4 +11,3 @@ pep8
 psycopg2
 pyflakes
 static3
-wsgiref
