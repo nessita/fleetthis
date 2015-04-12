@@ -1,1 +1,1 @@
-web: gunicorn fleetthis.wsgi
+web: gunicorn fleetthis.wsgi --log-file -

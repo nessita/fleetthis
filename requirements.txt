@@ -1,6 +1,7 @@
 Django
 dj-database-url
 dj-static
+django-toolbelt
 flake8
 gunicorn
 ipython
@@ -10,3 +11,4 @@ pep8
 psycopg2
 pyflakes
 static3
+wsgiref

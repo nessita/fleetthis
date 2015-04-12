@@ -3,4 +3,5 @@ fleetthis/media/
 fleetthis/__pycache__/
 fleetcore/__pycache__/
 fleetcore/*/__pycache__/
-db.sqlite
+staticfiles/
+media/

@@ -1,11 +1,12 @@
 {% extends 'fleetcore/base.html' %}
+{% load static %}
 {% load firstof from future %}
 
 {% block html-title %}Home - {{ block.super }}{% endblock %}
 
 {% block extra-head %}
-    <script type="text/javascript" src="{{ STATIC_URL }}js/flotr2.min.js"></script>
-    <script type="text/javascript" src="{{ STATIC_URL }}js/charts.js"></script>
+    <script type="text/javascript" src="{% static 'js/flotr2.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/charts.js' %}"></script>
     <script type="text/javascript">
         $(document).ready(function () {
             var container_id = 'minutes';
