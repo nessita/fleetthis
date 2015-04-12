@@ -43,10 +43,8 @@ INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
-    'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.flatpages',
     'fleetcore',
 )
 
@@ -57,7 +55,6 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
 )
 
 ROOT_URLCONF = 'fleetthis.urls'
@@ -87,16 +84,12 @@ DATABASES['default'] = dj_database_url.config()
 # Honor the 'X-Forwarded-Proto' header for request.is_secure()
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-ADMINS = (('Owner', 'fleetthis@gmail.com'),)
-SITE_ID = 1
-SITE_DOMAIN = 'fleetthis.com.ar'
-
 AUTH_USER_MODEL = 'fleetcore.FleetUser'
 
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.setdefault('EMAIL_HOST_USER', ADMINS[0][1])
+EMAIL_HOST_USER = os.environ.setdefault('EMAIL_HOST_USER', 'fleetthis@gmail.com')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
 LOGIN_REDIRECT_URL = 'home'
