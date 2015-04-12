@@ -59,7 +59,7 @@ class Factory(object):
         return self.make_something(Fleet, default, **kwargs)
 
     def make_bill(self, **kwargs):
-        default = dict(fleet=self.make_fleet(), invoice='invoices/zaraza.pdf')
+        default = dict(fleet=self.make_fleet())
         return self.make_something(Bill, default, **kwargs)
 
     def make_plan(self, **kwargs):

@@ -3,6 +3,7 @@
 import logging
 import os
 
+from io import BytesIO
 from unittest import TestCase
 
 from fleetcore import pdf2cell
@@ -23,34 +24,25 @@ class ParsePDFTestCase(TestCase):
                         self.fname)
         logging.getLogger().setLevel(logging.ERROR)
 
-    def test_non_existing_file(self):
-        assert not os.path.exists(self.fname)
-        result = pdf2cell.parse_file(self.fname)
-        self.assertEqual(result, None)
+    def parse(self, content, **kwargs):
+        file_obj = BytesIO(content)
+        result = pdf2cell.parse_file(file_obj, **kwargs)
+        return result
 
     def test_empty_file(self):
-        with open(self.fname, 'w') as f:
-            pass
-
-        assert os.path.exists(self.fname)
-        with open(self.fname) as f:
-            assert f.read() == ''
-
-        result = pdf2cell.parse_file(self.fname)
+        result = self.parse(content=b'')
         self.assertEqual(result, {})
 
     def test_invalid_pdf_file(self):
-        with open(self.fname, 'w') as f:
-            f.write('30947hknsl.nfa;kfjawlfhnqwlvlc.;vlasmlna')
-
-        assert os.path.exists(self.fname)
-
-        result = pdf2cell.parse_file(self.fname)
+        result = self.parse(content=b'30947hksl.nfa;kfjawlfhnqwlvlc.;vlasmlna')
         self.assertEqual(result, {})
 
     def test_real_pdf(self):
         fname = os.path.join(os.path.dirname(__file__), 'files', self.real_pdf)
-        result = pdf2cell.parse_file(fname, format=self.format)
+        with open(fname, 'rb') as f:
+            content = f.read()
+
+        result = self.parse(content=content, format=self.format)
 
         self.assertEqual(sorted(result.keys()),
                          sorted(self.real_result.keys()))

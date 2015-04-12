@@ -62,8 +62,8 @@
     {% if current_user.leadering.count %}
     <h4>Leadering</h4>
     <ul>
-        {% for profile in current_user.leadering.all %}
-            <li><a href="{% url 'user-details' profile.user.username %}">{{ profile.user.get_full_name }}</a></li>
+        {% for u in current_user.leadering.all %}
+            <li><a href="{% url 'user-details' u.username %}">{{ u.get_full_name }}</a></li>
         {% endfor %}
     </ul>
     {% endif %}

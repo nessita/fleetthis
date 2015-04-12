@@ -29,31 +29,11 @@ class BillAdminTestCase(TestCase):
                           password='admin')
 
     @property
-    def process_invoice_url(self):
-        return reverse('admin:process-invoice',
-                       kwargs=dict(bill_id=self.bill.id))
+    def recalculate_url(self):
+        return reverse('admin:recalculate', kwargs=dict(bill_id=self.bill.id))
 
-    def test_process_invoice(self):
-        self.client.get(self.process_invoice_url)
+    def test_recalculate(self):
+        self.client.get(self.recalculate_url)
         # bill is parsed
         # bill is adjusted
         # response is a redirect to details
-
-    def test_process_invoice_with_bill_parsed(self):
-        self.bill.parse_invoice()
-        self.client.get(self.process_invoice_url)
-        # not error
-        # bill is adjusted
-        # response is a redirect to details
-
-    def test_process_invoice_with_parse_error(self):
-        self.bill.parse_invoice = Mock()
-        self.bill.parse_invoice.side_effect = Bill.ParseError('foo')
-        self.client.get(self.process_invoice_url)
-        # response is a redirect to '..' with error message 'foo'
-
-    def test_process_invoice_with_adjustment_error(self):
-        self.bill.calculate_penalties = Mock()
-        self.bill.calculate_penalties.side_effect = Bill.AdjustmentError('foo')
-        self.client.get(self.process_invoice_url)
-        # response is a redirect to '..' with error message 'foo'

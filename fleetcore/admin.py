@@ -1,5 +1,6 @@
 # coding: utf-8
 
+from django import forms
 from django.conf.urls import patterns, url
 from django.contrib import admin, messages
 from django.db import models
@@ -23,6 +24,22 @@ from fleetcore.models import (
 from fleetcore.sendbills import BillSummarySender
 
 
+class BillAdminForm(forms.ModelForm):
+
+    invoice = forms.FileField()
+
+    def __init__(self, *args, **kwargs):
+        super(BillAdminForm, self).__init__(*args, **kwargs)
+        if self.instance.parsing_date is not None:
+            self.fields['invoice'] = forms.CharField(
+                widget=forms.TextInput(attrs={'readonly': True, 'size': 70}),
+                initial=self.instance.invoice_filename)
+
+    class Meta:
+        model = Bill
+        fields = '__all__'
+
+
 class PenaltyAdmin(admin.StackedInline):
     fieldsets = (
         (None, {'fields': (('plan', 'minutes', 'sms'),)}),
@@ -33,6 +50,7 @@ class PenaltyAdmin(admin.StackedInline):
 
 class BillAdmin(admin.ModelAdmin):
 
+    form = BillAdminForm
     formfield_overrides = {
         models.TextField: {'widget': TextInput},
     }
@@ -43,7 +61,7 @@ class BillAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
             'fields': (
-                ('fleet', 'invoice', 'invoice_format'),
+                ('fleet', 'invoice'),
                 ('parsing_date', 'upload_date'),
             )
         }),
@@ -67,9 +85,6 @@ class BillAdmin(admin.ModelAdmin):
         urls = super(BillAdmin, self).get_urls()
         my_urls = patterns(
             '',
-            url(r'^(?P<bill_id>\d+)/process-invoice/$',
-                self.admin_site.admin_view(self.process_invoice),
-                name='process-invoice'),
             url(r'^(?P<bill_id>\d+)/recalculate/$',
                 self.admin_site.admin_view(self.recalculate),
                 name='recalculate'),
@@ -79,22 +94,26 @@ class BillAdmin(admin.ModelAdmin):
         )
         return my_urls + urls
 
-    def process_invoice(self, request, bill_id):
-        obj = get_object_or_404(self.get_queryset(request), pk=bill_id)
-        error_msg = _('Invoice processed unsuccessfully. Error: ')
+    def save_model(self, request, obj, form, change):
+        super(BillAdmin, self).save_model(request, obj, form, change)
+        if obj.parsing_date is not None:
+            return
 
+        invoice = form.cleaned_data['invoice']
+        error_msg = _('Invoice processed unsuccessfully. Error: ')
         try:
-            obj.parse_invoice()
+            obj.parse_invoice(invoice)
         except Bill.ParseError as e:
             messages.error(request, error_msg + str(e))
+        else:
+            self.recalculate(request, obj,
+                             msg=_('Invoice processed successfully.'))
 
-        self.recalculate(request, bill_id,
-                         msg=_('Invoice processed successfully.'))
+    def recalculate(self, request, obj=None, bill_id=None, msg=None):
+        if obj is None:
+            assert bill_id is not None, 'Bill id should not be None'
+            obj = get_object_or_404(self.get_queryset(request), pk=bill_id)
 
-        return HttpResponseRedirect('..')
-
-    def recalculate(self, request, bill_id, msg=None):
-        obj = get_object_or_404(self.get_queryset(request), pk=bill_id)
         error_msg = _('Invoice processed unsuccessfully. Error: ')
 
         try:

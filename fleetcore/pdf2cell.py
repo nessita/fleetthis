@@ -267,17 +267,12 @@ class NewCellularConverter(CellularConverter):
                   BILL_TOTAL_NEW_RE)
 
 
-def parse_file(fname, format='new'):
-    try:
-        input_fd = open(fname, 'rb')
-    except IOError:
-        return None
-
+def parse_file(invoice_file_object, format='new'):
     try:
         if format == 'old':
-            device = OldCellularConverter(input_fd)
+            device = OldCellularConverter(invoice_file_object)
         else:
-            device = NewCellularConverter(input_fd)
+            device = NewCellularConverter(invoice_file_object)
         result = device.gather_phone_info()
     except (PDFSyntaxError, PDFNoValidXRef, PSEOF):
         result = {}
@@ -287,7 +282,8 @@ def parse_file(fname, format='new'):
 
 if __name__ == '__main__':
     fname = sys.argv[1]  # fail if no filename is given
-    data = parse_file(fname)
+    with open(fname, 'rb') as f:
+        data = parse_file(f)
     phone_data = data.pop('phone_data')
     print('-----------------------------')
     for k, v in data.items():

@@ -5,6 +5,7 @@ import os
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from io import BytesIO
 
 from django.core.files import File
 from django.contrib.auth import get_user_model
@@ -132,12 +133,8 @@ class ParseInvoiceTestCase(BillTestCase):
         return Phone.objects.create(number=number, current_plan=plan,
                                     user=user)
 
-    def assert_no_data_processed(self, pdf_parser_called=False):
-        if pdf_parser_called:
-            self.mock_pdf_parser.assert_called_with(self.obj.invoice.path,
-                                                    format='new')
-        else:
-            self.assertFalse(self.mock_pdf_parser.called)
+    def assert_no_data_processed(self, file_obj):
+        self.mock_pdf_parser.assert_called_with(file_obj, format='new')
 
         self.assertEqual(Consumption.objects.count(), 0)
         # reload bill from db
@@ -176,69 +173,46 @@ class ParseInvoiceTestCase(BillTestCase):
         self.assertEqual(c.other_price, data[OTHER_PRICE])
         self.assertEqual(c.reported_total, data[TOTAL_PRICE])
 
-    def test_empty_path(self):
-        assert Consumption.objects.count() == 0
-        self.obj.invoice = File('')
-        self.obj.save()
-
-        self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
-        self.assert_no_data_processed()
-
-    def test_unexistent_path(self):
-        assert Consumption.objects.count() == 0
-        assert not os.path.exists(self.obj.invoice.path)
-
-        self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
-        self.assert_no_data_processed()
-
     def test_non_empty_bill_is_parsed(self):
         assert Consumption.objects.count() == 0
 
-        path = os.path.join(TEST_FILES_DIR, 'empty.pdf')
-        assert not os.path.exists(path)
-        with open(path, 'w'):
-            self.addCleanup(os.remove, path)
+        self.mock_pdf_parser.return_value = {}
 
-        self.obj.invoice = File(path)
-        self.obj.save()
-
-        self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
-        self.assert_no_data_processed()
+        file_obj = BytesIO()
+        self.obj.parse_invoice(file_obj)
+        self.assert_no_data_processed(file_obj)
 
     def test_missing_phones(self):
         assert Consumption.objects.count() == 0
 
-        path = self.obj.invoice.path
-        with open(path, 'w'):
-            self.addCleanup(os.remove, path)
-        assert os.path.exists(self.obj.invoice.path)
-
         self.mock_pdf_parser.return_value = PDF_PARSED_SAMPLE
 
+        file_obj = BytesIO()
         # phones are not previously added, so parse is not successful
-        self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
-        self.assert_no_data_processed(pdf_parser_called=True)
+        self.assertRaises(Bill.ParseError, self.obj.parse_invoice, file_obj)
+        self.assert_no_data_processed(file_obj)
 
     def test_missing_one_phone(self):
         self.test_missing_phones()
         self._make_phone(plan='PLAN1', number='1234567890')
 
+        file_obj = BytesIO()
         # only one phone is in the system, so parse is not successful
-        self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
-        self.assert_no_data_processed(pdf_parser_called=True)
+        self.assertRaises(Bill.ParseError, self.obj.parse_invoice, file_obj)
+        self.assert_no_data_processed(file_obj)
 
     def test_successful_parsing(self):
         self.test_missing_one_phone()
         self._make_phone(plan='PLAN2', number='1987654320')
 
         right_now = now()
+        file_obj = BytesIO()
         with patch('fleetcore.models.now') as mock_date:
             mock_date.return_value = right_now
             # both phones are in the system, so parse should succeed
-            self.obj.parse_invoice()
+            self.obj.parse_invoice(file_obj)
 
-        self.mock_pdf_parser.assert_called_with(self.obj.invoice.path,
-                                                format='new')
+        self.mock_pdf_parser.assert_called_with(file_obj, format='new')
         self.assertEqual(Consumption.objects.count(), 2)
 
         # reload bill from db
@@ -254,7 +228,7 @@ class ParseInvoiceTestCase(BillTestCase):
 
     def test_do_not_parse_twice(self):
         self.test_successful_parsing()
-        self.assertRaises(Bill.ParseError, self.obj.parse_invoice)
+        self.assertRaises(Bill.ParseError, self.obj.parse_invoice, BytesIO())
 
 
 class CalculatePenaltiesTestCase(BillTestCase):
@@ -264,18 +238,16 @@ class CalculatePenaltiesTestCase(BillTestCase):
         super(CalculatePenaltiesTestCase, self).setUp()
 
         data = (
-            1234567890,
-            1234560987,
-            1265437890,
+            '1234567890',
+            '1234560987',
+            '1265437890',
         )
         self.plan1 = Plan.objects.create(name='PLAN1', included_min=100)
         for p in data:
             self._make_consumption(self.plan1, p)
 
-        with open(self.obj.invoice.path, 'w'):
-            self.addCleanup(os.remove, self.obj.invoice.path)
         self.mock_pdf_parser.return_value = {}
-        self.obj.parse_invoice()
+        self.obj.parse_invoice(BytesIO())
         assert self.obj.parsing_date is not None
 
     def _make_consumption(self, plan, phone_number, bill=None):
@@ -388,7 +360,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
         self.test_with_min_clearing_minutes_left()
 
         plan2 = Plan.objects.create(name='PLAN2', included_min=333)
-        c = self._make_consumption(plan2, 1987654320)
+        c = self._make_consumption(plan2, '1987654320')
         c.included_min = 20
         c.exceeded_min = 13
         c.save()
@@ -416,8 +388,8 @@ class CalculatePenaltiesTestCase(BillTestCase):
     def test_with_other_bills(self):
         bill = self.factory.make_bill()
         plan2 = Plan.objects.create(name='PLAN2', included_min=333)
-        self._make_consumption(plan2, 1539518520, bill=bill)
-        self._make_consumption(plan2, 1539518521, bill=bill)
+        self._make_consumption(plan2, '7539518520', bill=bill)
+        self._make_consumption(plan2, '7539518521', bill=bill)
         assert plan2.with_min_clearing
 
         self.plan1.included_min = 0  # do not have spare minutes

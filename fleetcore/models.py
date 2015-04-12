@@ -86,18 +86,8 @@ class Fleet(models.Model):
 class Bill(models.Model):
     """Monthly bill for a fleet."""
 
-    NEW_FORMAT = 'new'
-    OLD_FORMAT = 'old'
-    BILL_FORMAT_CHOICES = (
-        (NEW_FORMAT, 'New'),
-        (OLD_FORMAT, 'Old'),
-    )
-
     fleet = models.ForeignKey(Fleet)
-    invoice = models.FileField(upload_to='invoices')
-    invoice_format = models.CharField(max_length=3,
-                                      choices=BILL_FORMAT_CHOICES,
-                                      default=NEW_FORMAT)
+    invoice_filename = models.CharField(max_length=512, null=True, blank=True)
     billing_date = models.DateField(null=True, blank=True)
     billing_total = MoneyField()
     billing_debt = MoneyField()
@@ -236,7 +226,7 @@ class Bill(models.Model):
             data_sms, penalty.sms, 'penalty_sms', 'total_sms')
 
     @transaction.atomic()
-    def parse_invoice(self):
+    def parse_invoice(self, invoice_file_object):
         """Parse this bill's invoice.
 
         Return whether the parse was successful
@@ -245,17 +235,11 @@ class Bill(models.Model):
         if self.parsing_date is not None:
             raise Bill.ParseError('Invoice already parsed on %s.' %
                                   self.parsing_date)
-
+        self.invoice_filename = getattr(
+            invoice_file_object, 'name', 'No name in file descriptor')
         try:
-            fname = self.invoice.path
-        except ValueError:
-            raise Bill.ParseError('Invoice path can not be loaded.')
-
-        if not os.path.exists(fname):
-            raise Bill.ParseError('Invoice path does not exist.')
-
-        try:
-            data = pdf2cell.parse_file(fname, format=self.invoice_format)
+            data = pdf2cell.parse_file(
+                invoice_file_object, format='new')
         except pdf2cell.CellularDataParseError as e:
             raise Bill.ParseError(unicode(e))
 
