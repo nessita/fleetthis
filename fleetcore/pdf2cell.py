@@ -289,5 +289,5 @@ if __name__ == '__main__':
     for k, v in data.items():
         print(k, v)
     print('-----------------------------')
-    print('\n'.join(map(lambda l: '|'.join(map(unicode, l)), phone_data)))
+    print('\n'.join('|'.join(map(str, l)) for l in phone_data))
     print('-----------------------------')

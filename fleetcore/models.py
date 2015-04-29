@@ -241,7 +241,7 @@ class Bill(models.Model):
             data = pdf2cell.parse_file(
                 invoice_file_object, format='new')
         except pdf2cell.CellularDataParseError as e:
-            raise Bill.ParseError(unicode(e))
+            raise Bill.ParseError(str(e))
 
         bill_date = data.get('bill_date')
         if bill_date:
@@ -396,7 +396,7 @@ class Phone(models.Model):
         get_latest_by = 'active_since'
 
     def __str__(self):
-        result = unicode(self.number)
+        result = str(self.number)
         if self.user.get_full_name():
             result += ' - %s' % self.user.get_full_name()
         return result
