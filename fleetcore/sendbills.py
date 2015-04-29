@@ -21,7 +21,7 @@ class BillSummarySender(object):
             body = template.render(Context({'bill': self.bill, 'data': data,
                                             'leader': leader}))
             subject = SUBJECT % self.bill.billing_date.strftime('%B')
-            from_email = settings.ADMIN_EMAIL
+            from_email = settings.EMAIL_HOST_USER
             to_list = [leader.email, from_email]
 
             kwargs = dict(
