@@ -1,3 +1,4 @@
+env/
 fleetthis/local_settings.py
 fleetthis/__pycache__/
 fleetcore/__pycache__/
