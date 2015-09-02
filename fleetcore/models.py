@@ -478,6 +478,7 @@ class Consumption(models.Model):
             total -= self.monthly_price
             # we now need the exceeded_min to be included since those seem to
             # be used against Claro lines
+            # other_diff = abs(self.other_price - self.exceeded_min_price)
             total += (
                 (Decimal(self.mins) + Decimal(self.penalty_min)) *
                 Decimal(plan.price_min))
