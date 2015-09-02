@@ -4,7 +4,8 @@
 {% block object-tools-items %}
     {% if original.parsing_date %}
     <li><a href="recalculate/" class="link">{% trans "Recalculate penalties" %}</a></li>
-    <li><a href="notify-users/" class="link">{% trans "Notify Users" %}</a></li>
+    <li><a href="notify-users/" class="link">{% trans "Notify users" %}</a></li>
+    <li><a href="add-delta/" class="link">{% trans "Add delta" %}</a></li>
     {% endif %}
     {{ block.super }}
 {% endblock %}

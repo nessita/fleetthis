@@ -1,7 +1,6 @@
 # coding: utf-8
 
 import logging
-import os
 
 from collections import defaultdict, OrderedDict
 from decimal import Decimal
@@ -10,7 +9,7 @@ from itertools import tee
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models, transaction
-from django.db.models import Sum
+from django.db.models import F, Sum
 from django.utils.timezone import now
 
 from fleetcore.fields import (
@@ -23,6 +22,8 @@ from fleetcore import pdf2cell
 from fleetcore.pdf2cell import (
     EXCEEDED_MIN,
     EXCEEDED_MIN_PRICE,
+    EXCEEDED_STABLISHING_MIN,
+    EXCEEDED_STABLISHING_MIN_PRICE,
     IDL_MIN,
     IDL_PRICE,
     INCLUDED_MIN,
@@ -286,8 +287,9 @@ class Bill(models.Model):
                 services=d[SERVICES],
                 refunds=d[REFUNDS],
                 included_min=d[INCLUDED_MIN],
-                exceeded_min=d[EXCEEDED_MIN],
-                exceeded_min_price=d[EXCEEDED_MIN_PRICE],
+                exceeded_min=d[EXCEEDED_MIN] + d[EXCEEDED_STABLISHING_MIN],
+                exceeded_min_price=(
+                    d[EXCEEDED_MIN_PRICE] + d[EXCEEDED_STABLISHING_MIN_PRICE]),
                 ndl_min=d[NDL_MIN],
                 ndl_min_price=d[NDL_PRICE],
                 idl_min=d[IDL_MIN],
@@ -344,6 +346,11 @@ class Bill(models.Model):
                 penalty = Penalty.objects.create(
                     bill=self, plan=plan, minutes=diff_min, sms=diff_sms)
                 self.apply_penalty(consumptions, penalty)
+
+    def apply_delta(self, delta):
+        self.consumption_set.update(extra=F('extra') + delta)
+        for c in self.consumption_set.all():
+            c.save()
 
 
 class Plan(models.Model):
@@ -469,9 +476,10 @@ class Consumption(models.Model):
         plan = self.plan
         if plan.with_min_clearing:
             total -= self.monthly_price
-            # do not use total_min since it includes the exceeded_min
+            # we now need the exceeded_min to be included since those seem to
+            # be used against Claro lines
             total += (
-                (Decimal(self.included_min) + Decimal(self.penalty_min)) *
+                (Decimal(self.mins) + Decimal(self.penalty_min)) *
                 Decimal(plan.price_min))
 
             if plan.with_sms_clearing:

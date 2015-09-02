@@ -7,7 +7,6 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
 
-from django.core.files import File
 from django.contrib.auth import get_user_model
 from django.test import TransactionTestCase
 from django.utils.timezone import now

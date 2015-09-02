@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from django.utils.translation import ugettext_lazy as _
 
+from fleetcore.forms import DeltaForm
 from fleetcore.models import (
     Bill,
     Consumption,
@@ -91,6 +92,9 @@ class BillAdmin(admin.ModelAdmin):
             url(r'^(?P<bill_id>\d+)/notify-users/$',
                 self.admin_site.admin_view(self.notify_users),
                 name='notify-users'),
+            url(r'^(?P<bill_id>\d+)/add-delta/$',
+                self.admin_site.admin_view(self.add_delta),
+                name='notify-users'),
         )
         return my_urls + urls
 
@@ -148,6 +152,24 @@ class BillAdmin(admin.ModelAdmin):
         return TemplateResponse(request,
                                 'admin/fleetcore/bill/notify_users.html',
                                 dict(emails=emails))
+
+    def add_delta(self, request, bill_id):
+        obj = get_object_or_404(self.get_queryset(request), pk=bill_id)
+
+        if request.method == 'POST':
+            form = DeltaForm(request.POST)
+            if form.is_valid():
+                delta = form.cleaned_data['delta']
+                obj.apply_delta(delta)
+                msg = _('Delta %s added successfully.' % delta)
+                messages.success(request, msg)
+                return HttpResponseRedirect('..')
+        else:
+            form = DeltaForm()
+
+        return TemplateResponse(request,
+                                'admin/fleetcore/bill/add_delta.html',
+                                dict(form=form))
 
 
 class ConsumptionAdmin(admin.ModelAdmin):

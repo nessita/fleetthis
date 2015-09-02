@@ -2,9 +2,8 @@
 
 from django.core.urlresolvers import reverse
 from django.test import TestCase
-from mock import Mock, patch
+from mock import patch
 
-from fleetcore.models import Bill
 from fleetcore.tests.factory import Factory
 
 
