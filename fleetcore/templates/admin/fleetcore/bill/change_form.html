@@ -3,9 +3,9 @@
 
 {% block object-tools-items %}
     {% if original.parsing_date %}
-    <li><a href="recalculate/" class="link">{% trans "Recalculate penalties" %}</a></li>
-    <li><a href="notify-users/" class="link">{% trans "Notify users" %}</a></li>
-    <li><a href="add-delta/" class="link">{% trans "Add delta" %}</a></li>
+    <li><a href="{% url 'admin:recalculate' original.id %}" class="link">{% trans "Recalculate penalties" %}</a></li>
+    <li><a href="{% url 'admin:notify-users' original.id %}" class="link">{% trans "Notify users" %}</a></li>
+    <li><a href="{% url 'admin:add-delta' original.id %}" class="link">{% trans "Add delta" %}</a></li>
     {% endif %}
     {{ block.super }}
 {% endblock %}

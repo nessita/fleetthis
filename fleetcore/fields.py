@@ -20,6 +20,7 @@ def validate_tax(value):
 
 class TaxField(models.DecimalField):
     """Field to store a tax value."""
+
     def __init__(self, *args, **kwargs):
         validators = kwargs.get('validators', [])
         validators.append(validate_tax)

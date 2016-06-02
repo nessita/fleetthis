@@ -1,8 +1,10 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth import get_user_model
+from django.contrib.auth.views import logout
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.test import TestCase
+from django.test.utils import override_settings
 
 from fleetcore.decorators import leadership_required
 
@@ -18,17 +20,16 @@ def test_view(request, username):
     return HttpResponse('OK')
 
 
-urlpatterns = patterns(
-    '',
+urlpatterns = [
     url(r'^$', home, name='home'),
-    url(r'^logout/$', 'django.contrib.auth.views.logout', name='logout'),
+    url(r'^logout/$', logout, name='logout'),
     url(r'^test-leadership-required/(?P<username>[\w-]+)/$', test_view,
         name='test-leadership'),
-)
+]
 
 
+@override_settings(ROOT_URLCONF='fleetcore.tests.test_decorators')
 class LeadershipRequiredTestCase(TestCase):
-    urls = 'fleetcore.tests.test_decorators'
 
     def setUp(self):
         self.url = reverse('test-leadership', args=['user'])

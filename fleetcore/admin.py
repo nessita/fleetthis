@@ -84,8 +84,7 @@ class BillAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         urls = super(BillAdmin, self).get_urls()
-        my_urls = patterns(
-            '',
+        my_urls = [
             url(r'^(?P<bill_id>\d+)/recalculate/$',
                 self.admin_site.admin_view(self.recalculate),
                 name='recalculate'),
@@ -94,8 +93,8 @@ class BillAdmin(admin.ModelAdmin):
                 name='notify-users'),
             url(r'^(?P<bill_id>\d+)/add-delta/$',
                 self.admin_site.admin_view(self.add_delta),
-                name='notify-users'),
-        )
+                name='add-delta'),
+        ]
         return my_urls + urls
 
     def save_model(self, request, obj, form, change):
