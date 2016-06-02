@@ -2,12 +2,8 @@ Django
 dj-database-url
 dj-static
 django-toolbelt
-flake8
 gunicorn
 ipython
-mock
 pdfminer3k
-pep8
 psycopg2
-pyflakes
 static3
