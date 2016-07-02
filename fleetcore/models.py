@@ -455,7 +455,7 @@ class Consumption(models.Model):
     total_before_taxes = MoneyField()
     taxes = models.DecimalField(
         default=Decimal('0'),
-        validators=validate_tax, decimal_places=5, max_digits=6)
+        validators=[validate_tax], decimal_places=5, max_digits=6)
     total_before_round = MoneyField()
     total = MoneyField()
 
