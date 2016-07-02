@@ -97,13 +97,13 @@ class Bill(models.Model):
     provider_number = models.CharField(max_length=50, blank=True)
     internal_tax = models.DecimalField(
         default=Decimal('0.0417'),
-        validators=validate_tax, decimal_places=5, max_digits=6)
+        validators=[validate_tax], decimal_places=5, max_digits=6)
     iva_tax = models.DecimalField(
         default=Decimal('0.27'),
-        validators=validate_tax, decimal_places=5, max_digits=6)
+        validators=[validate_tax], decimal_places=5, max_digits=6)
     other_tax = models.DecimalField(
         default=Decimal('0.04'),
-        validators=validate_tax, decimal_places=5, max_digits=6)
+        validators=[validate_tax], decimal_places=5, max_digits=6)
     notes = models.TextField(blank=True)
     created = models.DateField(auto_now_add=True)
     last_modified = models.DateField(auto_now=True)
