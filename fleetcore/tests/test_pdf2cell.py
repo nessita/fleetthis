@@ -7,16 +7,16 @@ from io import BytesIO
 from unittest import TestCase
 
 from fleetcore import pdf2cell
-from fleetcore.tests.results import PDF_PARSE_RESULT, PDF_PARSE_NEW_RESULT
+from fleetcore.tests.results import PDF_PARSE_RESULT_1, PDF_PARSE_RESULT_2
 
 
 class ParsePDFTestCase(TestCase):
     """The test suite for the parse_pdf method."""
 
     fname = 'foo.pdf'
-    format = 'old'
-    real_pdf = 'test.pdf'
-    real_result = PDF_PARSE_RESULT
+    real_pdf = 'test_1.pdf'
+    real_result = PDF_PARSE_RESULT_1
+    maxDiff = None
 
     def setUp(self):
         super(ParsePDFTestCase, self).setUp()
@@ -42,7 +42,7 @@ class ParsePDFTestCase(TestCase):
         with open(fname, 'rb') as f:
             content = f.read()
 
-        result = self.parse(content=content, format=self.format)
+        result = self.parse(content=content)
 
         self.assertEqual(sorted(result.keys()),
                          sorted(self.real_result.keys()))
@@ -52,9 +52,8 @@ class ParsePDFTestCase(TestCase):
         self.assertEqual(result, self.real_result)
 
 
-class ParseNewPDFTestCase(ParsePDFTestCase):
-    """The test suite for the parse_pdf method using the new PDF format."""
+class ParseNoOtherTaxPDFTestCase(ParsePDFTestCase):
+    """The test suite for the parse_pdf method."""
 
-    format = 'new'
-    real_pdf = 'test_new.pdf'
-    real_result = PDF_PARSE_NEW_RESULT
+    real_pdf = 'test_2.pdf'
+    real_result = PDF_PARSE_RESULT_2

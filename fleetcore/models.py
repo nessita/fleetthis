@@ -16,7 +16,7 @@ from fleetcore.fields import (
     MinuteField,
     MoneyField,
     SMSField,
-    validate_tax,
+    TaxField,
 )
 from fleetcore import pdf2cell
 from fleetcore.pdf2cell import (
@@ -95,15 +95,9 @@ class Bill(models.Model):
     parsing_date = models.DateTimeField(null=True, blank=True)
     upload_date = models.DateTimeField(default=now)
     provider_number = models.CharField(max_length=50, blank=True)
-    internal_tax = models.DecimalField(
-        default=Decimal('0.0417'),
-        validators=[validate_tax], decimal_places=5, max_digits=6)
-    iva_tax = models.DecimalField(
-        default=Decimal('0.27'),
-        validators=[validate_tax], decimal_places=5, max_digits=6)
-    other_tax = models.DecimalField(
-        default=Decimal('0.04'),
-        validators=[validate_tax], decimal_places=5, max_digits=6)
+    internal_tax = TaxField(default=Decimal('0.0417'))
+    iva_tax = TaxField(default=Decimal('0.27'))
+    other_tax = TaxField(default=Decimal('0.04'))
     notes = models.TextField(blank=True)
     created = models.DateField(auto_now_add=True)
     last_modified = models.DateField(auto_now=True)
@@ -245,8 +239,7 @@ class Bill(models.Model):
         self.invoice_filename = getattr(
             invoice_file_object, 'name', 'No name in file descriptor')
         try:
-            data = pdf2cell.parse_file(
-                invoice_file_object, format='new')
+            data = pdf2cell.parse_file(invoice_file_object)
         except pdf2cell.CellularDataParseError as e:
             raise Bill.ParseError(str(e))
 
@@ -453,9 +446,7 @@ class Consumption(models.Model):
     mins = MinuteField('Suma de minutos consumidos y excedentes, '
                        'antes de multas')
     total_before_taxes = MoneyField()
-    taxes = models.DecimalField(
-        default=Decimal('0'),
-        validators=[validate_tax], decimal_places=5, max_digits=6)
+    taxes = TaxField(default=Decimal('0'))
     total_before_round = MoneyField()
     total = MoneyField()
 

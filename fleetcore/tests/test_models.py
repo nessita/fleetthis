@@ -133,7 +133,7 @@ class ParseInvoiceTestCase(BillTestCase):
                                     user=user)
 
     def assert_no_data_processed(self, file_obj):
-        self.mock_pdf_parser.assert_called_with(file_obj, format='new')
+        self.mock_pdf_parser.assert_called_with(file_obj)
 
         self.assertEqual(Consumption.objects.count(), 0)
         # reload bill from db
@@ -211,7 +211,7 @@ class ParseInvoiceTestCase(BillTestCase):
             # both phones are in the system, so parse should succeed
             self.obj.parse_invoice(file_obj)
 
-        self.mock_pdf_parser.assert_called_with(file_obj, format='new')
+        self.mock_pdf_parser.assert_called_with(file_obj)
         self.assertEqual(Consumption.objects.count(), 2)
 
         # reload bill from db

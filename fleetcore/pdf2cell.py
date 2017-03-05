@@ -35,10 +35,8 @@ TAX_INTERNAL_RE = re.compile(
     r'Impuesto Interno\s*(\d+(?:\.\d+){0,1})%\s+(\d+,\d+)', re.IGNORECASE)
 TAX_PERCEP_RE = re.compile(
     r'Iva Percepcion (\d+(?:\.\d+){0,1})%\s+(\d+,\d+)', re.IGNORECASE)
-BILL_TOTAL_NEW_RE = re.compile(
+BILL_TOTAL_RE = re.compile(
     r'Total Factura Cta. 2/\d+\s*\$\s*((?:\d+\.){0,1}\d+,\d+)', re.IGNORECASE)
-BILL_TOTAL_OLD_RE = re.compile(
-    r'TOTAL FACTURA\s*\(IVA incluido\)\$\s*(\d+,\d+)', re.IGNORECASE)
 
 
 class CellularDataParseError(Exception):
@@ -48,10 +46,20 @@ class CellularDataParseError(Exception):
 class CellularConverter(PDFPageAggregator):
     """CellularConverter."""
 
-    front_pages = ()
-    table_pages = ()
-    taxes_pages = ()
-    taxes_fields = ()
+    format = dict(
+        bill_debt_token='TOTAL A PAGAR: $',
+        bill_number_token='Factura Nro.: ',
+        bill_total_token='TOTAL FACTURA: $',
+        date_token='Fecha de Factura: ',
+        join_token=' ',
+    )
+    front_pages = (2, 3, 4)
+    table_pages = (3, 4, 5)
+    taxes_pages = (3, 4)
+    taxes_fields = ('internal_tax', 'internal_tax_price',
+                    'percep_tax', 'percep_tax_price',
+                    'other_tax', 'other_tax_price')
+    taxes_list = (TAX_INTERNAL_RE, TAX_PERCEP_RE, TAX_FINANC_RE)
 
     bill_number_length = 13
     bill_total_length = bill_debt_length = 8
@@ -227,50 +235,9 @@ class CellularConverter(PDFPageAggregator):
         return result
 
 
-class OldCellularConverter(CellularConverter):
-    """CellularConverter."""
-
-    format = dict(
-        bill_debt_token='TOTAL A PAGAR$',
-        bill_number_token='Factura Nro.',
-        bill_total_token='TOTAL A PAGAR$',
-        date_token='Fecha de Factura',
-        join_token='',
-    )
-    front_pages = (1,)
-    table_pages = (2, 7, 10)
-    taxes_pages = (5, 6, 7, 8)
-    taxes_fields = ('internal_tax', 'internal_tax_price',
-                    'other_tax', 'other_tax_price', 'bill_total')
-    taxes_list = (TAX_INTERNAL_RE, TAX_FINANC_RE, BILL_TOTAL_OLD_RE)
-
-
-class NewCellularConverter(CellularConverter):
-    """CellularConverter."""
-
-    format = dict(
-        bill_debt_token='TOTAL A PAGAR: $',
-        bill_number_token='Factura Nro.: ',
-        bill_total_token='TOTAL FACTURA: $',
-        date_token='Fecha de Factura: ',
-        join_token=' ',
-    )
-    front_pages = (2, 3, 4)
-    table_pages = (3, 4, 5)
-    taxes_pages = (3, 4)
-    taxes_fields = ('internal_tax', 'internal_tax_price',
-                    'percep_tax', 'percep_tax_price',
-                    'other_tax', 'other_tax_price', 'bill_total')
-    taxes_list = (TAX_INTERNAL_RE, TAX_PERCEP_RE, TAX_FINANC_RE,
-                  BILL_TOTAL_NEW_RE)
-
-
-def parse_file(invoice_file_object, format='new'):
+def parse_file(invoice_file_object):
     try:
-        if format == 'old':
-            device = OldCellularConverter(invoice_file_object)
-        else:
-            device = NewCellularConverter(invoice_file_object)
+        device = CellularConverter(invoice_file_object)
         result = device.gather_phone_info()
     except (PDFSyntaxError, PDFNoValidXRef, PSEOF):
         result = {}
