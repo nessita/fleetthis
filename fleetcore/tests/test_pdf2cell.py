@@ -47,7 +47,8 @@ class ParsePDFTestCase(TestCase):
 
         self.assertCountEqual(result.keys(), expected.keys())
 
-        self.assertEqual(result['bill_date'].isoformat(), expected['bill_date'])
+        self.assertEqual(
+            result['bill_date'].isoformat(), expected['bill_date'])
         self.assertEqual(result['bill_debt'], Decimal(expected['bill_debt']))
         self.assertEqual(result['bill_number'], expected['bill_number'])
         self.assertEqual(result['bill_total'], Decimal(expected['bill_total']))
