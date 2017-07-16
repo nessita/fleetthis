@@ -24,7 +24,7 @@ class TaxField(models.DecimalField):
     def __init__(self, *args, **kwargs):
         validators = kwargs.get('validators', [])
         validators.append(validate_tax)
-        kwargs['validators'] = validators
+        kwargs['validators'] = set(validators)
         kwargs.setdefault('default', Decimal('0'))
         kwargs.setdefault('decimal_places', 5)
         kwargs.setdefault('max_digits', 6)
