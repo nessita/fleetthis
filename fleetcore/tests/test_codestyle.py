@@ -5,10 +5,10 @@ import os
 from collections import defaultdict
 from io import StringIO
 from unittest import TestCase
+from unittest.mock import patch
 
 import pep8
 
-from mock import patch
 from pyflakes.scripts.pyflakes import checkPath
 
 import fleetcore

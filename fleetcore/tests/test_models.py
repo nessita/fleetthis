@@ -6,11 +6,11 @@ import os
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TransactionTestCase
 from django.utils.timezone import now
-from mock import patch
 
 from fleetcore.models import (
     Bill,

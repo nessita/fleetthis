@@ -2,7 +2,7 @@
 
 from __future__ import print_function, unicode_literals
 
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 from django.contrib import admin
 
 import fleetcore.views

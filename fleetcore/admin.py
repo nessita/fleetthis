@@ -1,7 +1,7 @@
 # coding: utf-8
 
 from django import forms
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.contrib import admin, messages
 from django.db import models
 from django.forms.widgets import TextInput

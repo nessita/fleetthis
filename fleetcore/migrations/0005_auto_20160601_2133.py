@@ -18,22 +18,22 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='bill',
             name='internal_tax',
-            field=models.DecimalField(decimal_places=5, default=Decimal('0.0417'), max_digits=6, validators=fleetcore.fields.validate_tax),
+            field=models.DecimalField(decimal_places=5, default=Decimal('0.0417'), max_digits=6),
         ),
         migrations.AlterField(
             model_name='bill',
             name='iva_tax',
-            field=models.DecimalField(decimal_places=5, default=Decimal('0.27'), max_digits=6, validators=fleetcore.fields.validate_tax),
+            field=models.DecimalField(decimal_places=5, default=Decimal('0.27'), max_digits=6),
         ),
         migrations.AlterField(
             model_name='bill',
             name='other_tax',
-            field=models.DecimalField(decimal_places=5, default=Decimal('0.04'), max_digits=6, validators=fleetcore.fields.validate_tax),
+            field=models.DecimalField(decimal_places=5, default=Decimal('0.04'), max_digits=6),
         ),
         migrations.AlterField(
             model_name='consumption',
             name='taxes',
-            field=models.DecimalField(decimal_places=5, default=Decimal('0'), max_digits=6, validators=fleetcore.fields.validate_tax),
+            field=models.DecimalField(decimal_places=5, default=Decimal('0'), max_digits=6),
         ),
         migrations.AlterField(
             model_name='fleetuser',
