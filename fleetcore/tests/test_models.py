@@ -139,7 +139,7 @@ class ParseInvoiceTestCase(BillTestCase):
         # reload bill from db
         bill = Bill.objects.get(id=self.obj.id)
         self.assertIsNone(bill.billing_date)
-        self.assertIsNone(bill.parsing_date)
+        self.assertIsNotNone(bill.parsing_date)
         self.assertEqual(bill.provider_number, '')
         self.assertEqual(bill.billing_debt, Decimal('0'))
         self.assertEqual(bill.billing_total, Decimal('0'))
