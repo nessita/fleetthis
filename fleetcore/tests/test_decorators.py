@@ -1,4 +1,4 @@
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.contrib.auth import get_user_model
 from django.contrib.auth.views import logout
 from django.core.urlresolvers import reverse
