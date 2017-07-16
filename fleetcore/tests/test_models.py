@@ -139,7 +139,7 @@ class ParseInvoiceTestCase(BillTestCase):
         # reload bill from db
         bill = Bill.objects.get(id=self.obj.id)
         self.assertIsNone(bill.billing_date)
-        self.assertIsNotNone(bill.parsing_date)
+        self.assertIsNone(bill.parsing_date)
         self.assertEqual(bill.provider_number, '')
         self.assertEqual(bill.billing_debt, Decimal('0'))
         self.assertEqual(bill.billing_total, Decimal('0'))
@@ -245,7 +245,7 @@ class CalculatePenaltiesTestCase(BillTestCase):
         for p in data:
             self._make_consumption(self.plan1, p)
 
-        self.mock_pdf_parser.return_value = {}
+        self.mock_pdf_parser.return_value = {'bill_date': now()}
         self.obj.parse_invoice(BytesIO())
         assert self.obj.parsing_date is not None
 

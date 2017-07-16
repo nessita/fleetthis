@@ -243,6 +243,9 @@ class Bill(models.Model):
         except pdf2cell.CellularDataParseError as e:
             raise Bill.ParseError(str(e))
 
+        if not data:
+            return
+
         bill_date = data.get('bill_date')
         if bill_date:
             self.billing_date = bill_date
