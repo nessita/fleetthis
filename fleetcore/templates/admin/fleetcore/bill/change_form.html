@@ -1,0 +1,42 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+    {% if original.parsing_date %}
+    <li><a href="{% url 'admin:recalculate' original.id %}" class="link">{% trans "Recalculate penalties" %}</a></li>
+    <li><a href="{% url 'admin:notify-users' original.id %}" class="link">{% trans "Notify users" %}</a></li>
+    <li><a href="{% url 'admin:add-delta' original.id %}" class="link">{% trans "Add delta" %}</a></li>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}
+
+{% block after_field_sets %}
+{% if original %}
+<div>
+{% for leader, data in original.details.items %}
+  <fieldset class="module aligned">
+  <h2>
+    Consumptions for {{ leader.get_full_name }} - Total $ {{ data.total|floatformat:0 }}
+  </h2>
+
+  <table>
+  <tbody>
+  {% for c in data.consumptions %}
+  <tr class="{% cycle "row1" "row2" %}">
+    <td><a href="/admin/fleetcore/phone/{{ c.phone.id }}">{{ c.phone.number }}</a></td>
+    <td><a href="/admin/fleetcore/plan/{{ c.plan.id }}">{{ c.plan.name }}</a></td>
+    <td><a href="/admin/fleetcore/consumption/{{ c.id }}">{{ c.phone.user.get_full_name }}</a></td>
+    <td>$ {{ c.total|floatformat:0 }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+  </table>
+
+  </fieldset>
+{% endfor %}
+</div>
+
+<div style="clear: both"></div>
+{% endif %}
+
+{% endblock %}

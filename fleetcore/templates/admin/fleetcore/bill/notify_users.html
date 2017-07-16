@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block content %}
+{% for email in emails %}
+  <div style="padding: 10px; margin: 10px; width: 70%; background: #eee;">
+    <p>{{ email.message|linebreaksbr }}</p>
+  </div>
+{% endfor %}
+<form action="" method="POST">
+    <h3>Are you sure you want to send these emails?</h3>
+    <input type="submit" value="Send emails" name="send_emails">
+    {% csrf_token %}
+</form>
+{% endblock %}

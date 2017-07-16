@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block navbar-right-menu %}
+    {% if user.is_superuser %}
+        <li><a href="{% url 'admin:index' %}">Admin</a></li>
+    {% endif %}
+    {% if user.is_authenticated %}
+        <li><a href="{% url 'home' %}">Home</a></li>
+        <li><a href="/faq/">FAQ</a></li>
+        <li><a href="{% url 'logout' %}">Logout</a></li>
+    {% endif %}
+{% endblock %}
