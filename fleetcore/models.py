@@ -51,7 +51,8 @@ def pairwise(iterable):
 
 class FleetUser(AbstractUser):
     leader = models.ForeignKey(
-        settings.AUTH_USER_MODEL, related_name='leadering', null=True)
+        settings.AUTH_USER_MODEL, related_name='leadering', null=True,
+        on_delete=models.CASCADE)
 
     def __str__(self):
         leader = self.leader
@@ -74,7 +75,8 @@ class LeaderTriangle(object):
 
 class Fleet(models.Model):
     """Phones fleet."""
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     account_number = models.CharField(max_length=128)
     email = models.EmailField()
     provider = models.CharField(max_length=256)
@@ -87,7 +89,7 @@ class Fleet(models.Model):
 class Bill(models.Model):
     """Monthly bill for a fleet."""
 
-    fleet = models.ForeignKey(Fleet)
+    fleet = models.ForeignKey(Fleet, on_delete=models.CASCADE)
     invoice_filename = models.CharField(max_length=512, null=True, blank=True)
     billing_date = models.DateField(null=True, blank=True)
     billing_total = MoneyField()
@@ -393,10 +395,13 @@ class SMSPack(models.Model):
 class Phone(models.Model):
     """Phone line."""
     number = models.CharField(max_length=10)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
-    current_plan = models.ForeignKey(Plan)
-    data_pack = models.ForeignKey(DataPack, blank=True, null=True)
-    sms_pack = models.ForeignKey(SMSPack, blank=True, null=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    current_plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
+    data_pack = models.ForeignKey(
+        DataPack, blank=True, null=True, on_delete=models.CASCADE)
+    sms_pack = models.ForeignKey(
+        SMSPack, blank=True, null=True, on_delete=models.CASCADE)
     notes = models.TextField(blank=True)
     active_since = models.DateTimeField(default=now)
     active_to = models.DateTimeField(null=True, blank=True)
@@ -417,12 +422,12 @@ class Phone(models.Model):
 
 class Consumption(models.Model):
     """Phone line consumption for a bill."""
-    phone = models.ForeignKey(Phone)
-    bill = models.ForeignKey(Bill)
+    phone = models.ForeignKey(Phone, on_delete=models.CASCADE)
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE)
 
     # Even though there is a FK to phone, the current plan for the phone may
     # not be the plan for this consumption (since phones may change its plan).
-    plan = models.ForeignKey(Plan)
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
 
     # every field (literal) from the invoice
     reported_user = models.CharField('Usuario', max_length=500, blank=True)
@@ -515,8 +520,8 @@ class Consumption(models.Model):
 
 class Penalty(models.Model):
     """Penalty to be charged to phone lines in a plan for a bill."""
-    bill = models.ForeignKey(Bill)
-    plan = models.ForeignKey(Plan)
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE)
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE)
     minutes = MinuteField()
     sms = SMSField()
 

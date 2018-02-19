@@ -2,8 +2,8 @@
 
 from __future__ import print_function, unicode_literals
 
-from django.conf.urls import include, url
 from django.contrib import admin
+from django.urls import include, path
 
 import fleetcore.views
 
@@ -12,7 +12,7 @@ admin.autodiscover()
 
 
 urlpatterns = [
-    url(r'^$', fleetcore.views.home, name='home'),
-    url(r'^fleetcore/', include('fleetcore.urls')),
-    url(r'^admin/', include(admin.site.urls)),
+    path('', fleetcore.views.home, name='home'),
+    path('fleetcore/', include('fleetcore.urls')),
+    path('admin/', admin.site.urls),
 ]

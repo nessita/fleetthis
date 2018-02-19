@@ -1,10 +1,10 @@
 from django.conf.urls import url
 from django.contrib.auth import get_user_model
 from django.contrib.auth.views import logout
-from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.test import TestCase
 from django.test.utils import override_settings
+from django.urls import reverse
 
 from fleetcore.decorators import leadership_required
 
