@@ -2,14 +2,14 @@
 
 from django.contrib.auth.views import (
     LoginView,
+    PasswordResetCompleteView,
+    PasswordResetConfirmView,
+    PasswordResetDoneView,
+    PasswordResetView,
     logout_then_login,
-    password_reset,
-    password_reset_done,
-    password_reset_confirm,
-    password_reset_complete,
-
 )
 from django.urls import path
+
 from fleetcore.views import (
     consumption_history,
     user_details,
@@ -25,17 +25,20 @@ urlpatterns = [
     path('login/', LoginView.as_view(template_name='fleetcore/login.html'),
          name='login'),
     path('logout/', logout_then_login, name='logout'),
-    path('password-reset/', password_reset,
-         dict(template_name='fleetcore/password_reset.html'),
+    path('password-reset/',
+         PasswordResetView.as_view(
+            template_name='fleetcore/password_reset.html'),
          name='password-reset'),
-    path('password-reset/done/', password_reset_done,
-         dict(template_name='fleetcore/password_reset_done.html'),
+    path('password-reset/done/',
+         PasswordResetDoneView.as_view(
+            template_name='fleetcore/password_reset_done.html'),
          name='password_reset_done'),
     path('password-reset/<uuid:uidb64>/<str:token>/confirm/',
-         password_reset_confirm,
-         dict(template_name='fleetcore/password_reset_confirm.html'),
+         PasswordResetConfirmView.as_view(
+            template_name='fleetcore/password_reset_confirm.html'),
          name='password_reset_confirm'),
-    path('password-reset/complete/', password_reset_complete,
-         dict(template_name='fleetcore/password_reset_complete.html'),
+    path('password-reset/complete/',
+         PasswordResetCompleteView.as_view(
+            template_name='fleetcore/password_reset_complete.html'),
          name='password_reset_complete'),
 ]

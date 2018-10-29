@@ -6,4 +6,3 @@ fleetcore/*/__pycache__/
 fleetcore/*/*/__pycache__/
 fleetcore/tests/files/*.json
 fleetcore/tests/files/*.pdf
-staticfiles/

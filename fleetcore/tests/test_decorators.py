@@ -1,6 +1,6 @@
 from django.conf.urls import url
 from django.contrib.auth import get_user_model
-from django.contrib.auth.views import logout
+from django.contrib.auth.views import LogoutView
 from django.http import HttpResponse
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -22,7 +22,7 @@ def test_view(request, username):
 
 urlpatterns = [
     url(r'^$', home, name='home'),
-    url(r'^logout/$', logout, name='logout'),
+    url(r'^logout/$', LogoutView.as_view(), name='logout'),
     url(r'^test-leadership-required/(?P<username>[\w-]+)/$', test_view,
         name='test-leadership'),
 ]
